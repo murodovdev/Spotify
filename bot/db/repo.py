@@ -1,4 +1,49 @@
+import asyncio
+import time
+
 from bot.db.database import db
+
+_user_cache: dict[int, dict] = {}
+_CACHE_MAX = 100_000
+
+_dirty = False
+_last_flush: float = 0
+_FLUSH_INTERVAL = 2.0
+
+
+def _evict(user_id: int) -> None:
+    _user_cache.pop(user_id, None)
+
+
+async def _mark_dirty() -> None:
+    global _dirty, _last_flush
+    _dirty = True
+    now = time.monotonic()
+    if now - _last_flush >= _FLUSH_INTERVAL:
+        await flush()
+
+
+async def flush() -> None:
+    global _dirty, _last_flush
+    if _dirty:
+        await db().commit()
+        _dirty = False
+    _last_flush = time.monotonic()
+
+
+async def _ensure_user(user_id: int) -> dict:
+    cached = _user_cache.get(user_id)
+    if cached is not None:
+        return cached
+    cur = await db().execute("SELECT quality, lang FROM users WHERE id=?", (user_id,))
+    row = await cur.fetchone()
+    if row:
+        entry = {"quality": row["quality"], "lang": row["lang"]}
+    else:
+        entry = {"quality": "320", "lang": None}
+    if len(_user_cache) < _CACHE_MAX:
+        _user_cache[user_id] = entry
+    return entry
 
 
 # --- Foydalanuvchilar ---
@@ -10,18 +55,31 @@ async def upsert_user(user_id: int, username: str | None, first_name: str | None
                                          first_name=excluded.first_name""",
         (user_id, username, first_name),
     )
-    await db().commit()
+    await _mark_dirty()
 
 
 async def get_quality(user_id: int) -> str:
-    cur = await db().execute("SELECT quality FROM users WHERE id=?", (user_id,))
-    row = await cur.fetchone()
-    return row["quality"] if row else "320"
+    return (await _ensure_user(user_id))["quality"]
 
 
 async def set_quality(user_id: int, quality: str) -> None:
     await db().execute("UPDATE users SET quality=? WHERE id=?", (quality, user_id))
     await db().commit()
+    cached = _user_cache.get(user_id)
+    if cached:
+        cached["quality"] = quality
+
+
+async def get_lang(user_id: int) -> str | None:
+    return (await _ensure_user(user_id))["lang"]
+
+
+async def set_lang(user_id: int, lang: str) -> None:
+    await db().execute("UPDATE users SET lang=? WHERE id=?", (lang, user_id))
+    await db().commit()
+    cached = _user_cache.get(user_id)
+    if cached:
+        cached["lang"] = lang
 
 
 # --- file_id kesh ---
@@ -60,20 +118,47 @@ async def add_history(user_id: int, spotify_id: str, title: str, artist: str) ->
         "INSERT INTO history(user_id, spotify_id, title, artist) VALUES(?,?,?,?)",
         (user_id, spotify_id, title, artist),
     )
-    await db().commit()
+    await _mark_dirty()
 
 
-async def get_history(user_id: int, limit: int = 10):
+# --- Sevimlilar ---
+
+async def is_favorite(user_id: int, spotify_id: str) -> bool:
     cur = await db().execute(
-        """SELECT spotify_id, title, artist, MAX(id) AS last_id
-           FROM history WHERE user_id=?
-           GROUP BY spotify_id ORDER BY last_id DESC LIMIT ?""",
+        "SELECT 1 FROM favorites WHERE user_id=? AND spotify_id=?",
+        (user_id, spotify_id),
+    )
+    return await cur.fetchone() is not None
+
+
+async def toggle_favorite(user_id: int, spotify_id: str, title: str, artist: str) -> bool:
+    """Sevimlilarga qo'shadi yoki olib tashlaydi. Qaytaradi: yakuniy holat (True = saqlangan)."""
+    if await is_favorite(user_id, spotify_id):
+        await db().execute(
+            "DELETE FROM favorites WHERE user_id=? AND spotify_id=?",
+            (user_id, spotify_id),
+        )
+        await db().commit()
+        return False
+    await db().execute(
+        """INSERT INTO favorites(user_id, spotify_id, title, artist) VALUES(?,?,?,?)
+           ON CONFLICT(user_id, spotify_id) DO NOTHING""",
+        (user_id, spotify_id, title, artist),
+    )
+    await db().commit()
+    return True
+
+
+async def list_favorites(user_id: int, limit: int = 50) -> list:
+    cur = await db().execute(
+        """SELECT spotify_id, title, artist FROM favorites
+           WHERE user_id=? ORDER BY created_at DESC LIMIT ?""",
         (user_id, limit),
     )
     return await cur.fetchall()
 
 
-# --- Spotify tokenlar (shifrlangan holda saqlanadi) ---
+# --- Spotify tokenlar ---
 
 async def save_tokens(user_id: int, refresh_enc: str, access_enc: str, expires_at: float) -> None:
     await db().execute(
@@ -112,7 +197,7 @@ async def incr(key: str, by: int = 1) -> None:
            ON CONFLICT(key) DO UPDATE SET value=value+excluded.value""",
         (key, by),
     )
-    await db().commit()
+    await _mark_dirty()
 
 
 async def get_stats() -> dict:
@@ -121,6 +206,7 @@ async def get_stats() -> dict:
         row = await cur.fetchone()
         return row[0] or 0
 
+    await flush()
     users = await one("SELECT COUNT(*) FROM users")
     cached = await one("SELECT COUNT(*) FROM track_cache")
     downloads = await one(

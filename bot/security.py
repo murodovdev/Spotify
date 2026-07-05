@@ -17,7 +17,7 @@ def decrypt(value: str) -> str:
 
 
 def sign_state(user_id: int) -> str:
-    sig = hmac.new(settings.fernet_key, str(user_id).encode(), hashlib.sha256)
+    sig = hmac.HMAC(settings.fernet_key, str(user_id).encode(), hashlib.sha256)
     return f"{user_id}.{sig.hexdigest()[:24]}"
 
 

@@ -1,12 +1,14 @@
-"""YouTube Music'dan audio yuklab olish, MP3 ga aylantirish va teglash."""
+"""YouTube'dan audio yuklab olish, MP3 ga aylantirish va teglash."""
 
 import asyncio
 import glob
 import logging
 import os
+import shutil
 import subprocess
-
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
+from functools import lru_cache
 
 import aiohttp
 from mutagen.id3 import APIC, ID3, TALB, TDRC, TIT2, TPE1, TRCK
@@ -18,9 +20,12 @@ from bot.services.spotify import Track, spotify
 
 log = logging.getLogger(__name__)
 
-MAX_SIZE = 49 * 1024 * 1024  # Telegram bot limiti 50 MB, zaxira bilan
-# 320 kbps da ~20 daqiqadan uzun trek 50 MB dan oshadi — oldindan 128 tanlaymiz
+MAX_SIZE = 49 * 1024 * 1024
 LONG_TRACK_SECONDS = 1200
+
+_MAX_CONCURRENT = int(os.getenv("MAX_DOWNLOADS", "4"))
+_download_sem = asyncio.Semaphore(_MAX_CONCURRENT)
+_executor = ThreadPoolExecutor(max_workers=_MAX_CONCURRENT, thread_name_prefix="dl")
 
 
 class TrackNotFound(Exception):
@@ -35,6 +40,20 @@ class TooLarge(Exception):
 class Downloaded:
     mp3_path: str
     thumb_path: str | None
+
+
+@lru_cache(maxsize=1)
+def _ffmpeg_location() -> str | None:
+    if shutil.which("ffmpeg"):
+        return None
+    winget_bin = (
+        r"C:\Users\user\AppData\Local\Microsoft\WinGet\Packages"
+        r"\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe"
+        r"\ffmpeg-8.1.2-full_build\bin"
+    )
+    if os.path.isfile(os.path.join(winget_bin, "ffmpeg.exe")):
+        return winget_bin
+    return None
 
 
 def _ydl_download(video_id: str, tmpdir: str, bitrate: str) -> str:
@@ -53,7 +72,15 @@ def _ydl_download(video_id: str, tmpdir: str, bitrate: str) -> str:
         "noprogress": True,
         "noplaylist": True,
         "retries": 3,
+        "socket_timeout": 20,
+        # YouTube standart `web` klientini IP bo'yicha bloklaydi → audio yuklashda
+        # 403 Forbidden. `android` klienti boshqa API orqali cheklanmagan URL beradi;
+        # `web_safari` — zaxira. (`source_address: 0.0.0.0` 403 keltirib chiqargani uchun olib tashlandi.)
+        "extractor_args": {"youtube": {"player_client": ["android", "web_safari"]}},
     }
+    ffmpeg_loc = _ffmpeg_location()
+    if ffmpeg_loc:
+        opts["ffmpeg_location"] = ffmpeg_loc
     with YoutubeDL(opts) as ydl:
         ydl.extract_info(f"https://www.youtube.com/watch?v={video_id}", download=True)
     files = glob.glob(os.path.join(tmpdir, "*.mp3"))
@@ -64,9 +91,12 @@ def _ydl_download(video_id: str, tmpdir: str, bitrate: str) -> str:
 
 def _reencode(path: str, bitrate: str) -> str:
     out = path.rsplit(".", 1)[0] + f".{bitrate}k.mp3"
+    ffmpeg_bin = _ffmpeg_location()
+    ffmpeg_exe = os.path.join(ffmpeg_bin, "ffmpeg.exe") if ffmpeg_bin else "ffmpeg"
     subprocess.run(
-        ["ffmpeg", "-y", "-loglevel", "error", "-i", path, "-b:a", f"{bitrate}k", out],
+        [ffmpeg_exe, "-y", "-loglevel", "error", "-i", path, "-b:a", f"{bitrate}k", out],
         check=True,
+        timeout=120,
     )
     os.remove(path)
     return out
@@ -93,18 +123,21 @@ def _tag(path: str, track: Track, cover: bytes | None) -> None:
     tags.save(path, v2_version=3)
 
 
-async def _fetch(url: str) -> bytes | None:
+async def _fetch_cover(url: str) -> bytes | None:
     if not url:
         return None
     try:
-        async with aiohttp.ClientSession(
-            timeout=aiohttp.ClientTimeout(total=15)
-        ) as session:
-            async with session.get(url) as resp:
-                if resp.status == 200:
-                    return await resp.read()
+        session = await spotify.session()
+        async with session.get(
+            url, timeout=aiohttp.ClientTimeout(total=10)
+        ) as resp:
+            if resp.status == 200:
+                data = await resp.read()
+                if len(data) > 5 * 1024 * 1024:
+                    return None
+                return data
     except Exception:
-        log.warning("Muqova rasmini olib bo'lmadi: %s", url)
+        log.debug("Muqova olib bo'lmadi: %s", url)
     return None
 
 
@@ -116,34 +149,36 @@ async def download(track: Track, bitrate: str, tmpdir: str) -> Downloaded:
     if bitrate == "320" and track.duration > LONG_TRACK_SECONDS:
         bitrate = "128"
 
-    # Embed rejimda playlist treklarida muqova bo'lmaydi — oEmbed'dan olamiz
     cover_url, thumb_url = track.cover_url, track.thumb_url
     if not cover_url and not track.id.startswith("yt:"):
         cover_url = thumb_url = await spotify.oembed_thumb(track.id)
 
-    # Audio yuklab olish va muqovani parallel bajaramiz
-    path_task = asyncio.create_task(
-        asyncio.to_thread(_ydl_download, video_id, tmpdir, bitrate)
-    )
-    cover_task = asyncio.create_task(_fetch(cover_url))
-    thumb_task = asyncio.create_task(_fetch(thumb_url))
-    try:
-        path = await path_task
-    except TrackNotFound:
-        raise
-    except Exception as e:
-        log.warning("yt-dlp xatosi %s: %s", track.full_name, e)
-        raise TrackNotFound(track.full_name) from e
-    cover = await cover_task
-    thumb = await thumb_task
+    async with _download_sem:
+        loop = asyncio.get_running_loop()
+        path_task = loop.run_in_executor(
+            _executor, _ydl_download, video_id, tmpdir, bitrate
+        )
+        cover_task = asyncio.create_task(_fetch_cover(cover_url))
+        thumb_task = asyncio.create_task(_fetch_cover(thumb_url))
+        try:
+            path = await path_task
+        except TrackNotFound:
+            raise
+        except Exception as e:
+            log.warning("yt-dlp xatosi %s: %s", track.full_name, e)
+            raise TrackNotFound(track.full_name) from e
+        cover = await cover_task
+        thumb = await thumb_task
 
     if os.path.getsize(path) > MAX_SIZE:
         if bitrate != "128":
-            path = await asyncio.to_thread(_reencode, path, "128")
+            loop = asyncio.get_running_loop()
+            path = await loop.run_in_executor(_executor, _reencode, path, "128")
         if os.path.getsize(path) > MAX_SIZE:
             raise TooLarge(track.full_name)
 
-    await asyncio.to_thread(_tag, path, track, cover)
+    loop = asyncio.get_running_loop()
+    await loop.run_in_executor(_executor, _tag, path, track, cover)
 
     thumb_path = None
     if thumb:

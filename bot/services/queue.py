@@ -11,15 +11,16 @@ from aiogram import Bot
 from aiogram.exceptions import TelegramBadRequest, TelegramRetryAfter
 from aiogram.types import FSInputFile, Message
 
-from bot import keyboards, store, texts
+from bot import keyboards, store
 from bot.db import repo
+from bot.i18n import Texts, progress_bar, track_caption
 from bot.services import downloader
 from bot.services.downloader import Downloaded, TooLarge, TrackNotFound
 from bot.services.spotify import Track, spotify
 
 log = logging.getLogger(__name__)
 
-PARALLEL_DOWNLOADS = 3
+PARALLEL_PER_USER = 3
 
 
 @dataclass
@@ -43,27 +44,38 @@ manager = TaskManager()
 
 
 async def _retrying(fn):
-    """Telegram flood-limitiga tushganda kutib qayta yuboradi."""
-    for _ in range(3):
+    for attempt in range(4):
         try:
             return await fn()
         except TelegramRetryAfter as e:
             await asyncio.sleep(e.retry_after + 0.5)
-    return await fn()
+        except TelegramBadRequest:
+            raise
+        except Exception:
+            if attempt == 3:
+                raise
+            await asyncio.sleep(0.5 * (attempt + 1))
 
 
-async def _send_cached(bot: Bot, chat_id: int, file_id: str, track: Track) -> Message:
+async def _send_cached(
+    bot: Bot, chat_id: int, user_id: int, file_id: str, track: Track, t: Texts
+) -> Message:
+    is_fav = await repo.is_favorite(user_id, track.id)
     return await _retrying(
         lambda: bot.send_audio(
             chat_id=chat_id,
             audio=file_id,
-            reply_markup=keyboards.track_buttons(track),
+            caption=track_caption(track),
+            reply_markup=keyboards.track_buttons(track, t, is_fav),
         )
     )
 
 
-async def _send_file(bot: Bot, chat_id: int, res: Downloaded, track: Track) -> Message:
+async def _send_file(
+    bot: Bot, chat_id: int, user_id: int, res: Downloaded, track: Track, t: Texts
+) -> Message:
     thumb = FSInputFile(res.thumb_path) if res.thumb_path else None
+    is_fav = await repo.is_favorite(user_id, track.id)
     return await _retrying(
         lambda: bot.send_audio(
             chat_id=chat_id,
@@ -72,7 +84,8 @@ async def _send_file(bot: Bot, chat_id: int, res: Downloaded, track: Track) -> M
             performer=track.artists,
             duration=track.duration or None,
             thumbnail=thumb,
-            reply_markup=keyboards.track_buttons(track),
+            caption=track_caption(track),
+            reply_markup=keyboards.track_buttons(track, t, is_fav),
         )
     )
 
@@ -85,43 +98,46 @@ async def _safe_edit(message: Message, text: str, reply_markup=None) -> None:
 
 
 async def _resolve_track(track_id: str) -> Track | None:
-    """Trek metadatasini topadi. "yt:" prefiksli treklar YouTube qidiruvidan kelgan."""
-    if not track_id.startswith("yt:"):
-        return await spotify.track(track_id)
-    track = store.get_yt(track_id)
+    # 1) Qidiruv natijalari xotirada — tarmoqqa murojaatsiz.
+    track = store.get(track_id)
     if track is not None:
         return track
-    # Bot qayta ishga tushgan bo'lsa — keshdagi nom/ijrochidan tiklaymiz
-    row = await repo.cache_any_row(track_id)
-    if row is None:
+    # 2) YouTube treki — keshdan title/artist tiklaymiz, video_id id'dan.
+    if track_id.startswith("yt:"):
+        row = await repo.cache_any_row(track_id)
+        if row is None:
+            return None
+        return Track(
+            id=track_id, title=row["title"] or "", artists=row["artist"] or "",
+            artist_id="", album="", album_id="", duration=0,
+            cover_url="", thumb_url="", year="", track_no=0,
+            video_id=track_id[3:],
+        )
+    # 3) Boshqa sintetik provayder id'lari faqat xotirada yashaydi — eskirgan bo'lsa yo'q.
+    if track_id.startswith(("it:", "dz:")):
         return None
-    return Track(
-        id=track_id, title=row["title"] or "", artists=row["artist"] or "",
-        artist_id="", album="", album_id="", duration=0,
-        cover_url="", thumb_url="", year="", track_no=0,
-        video_id=track_id[3:],
-    )
+    # 4) Haqiqiy Spotify trek id'si (havoladan) — rasmiy/embed orqali olamiz.
+    return await spotify.track(track_id)
 
 
-async def process_single(bot: Bot, chat_id: int, user_id: int, track_id: str) -> None:
-    """Bitta trekni topib yuboradi (kesh → yuklab olish)."""
-    status = await bot.send_message(chat_id, texts.SEARCHING)
+async def process_single(bot: Bot, chat_id: int, user_id: int, track_id: str, t: Texts) -> None:
+    status = await bot.send_message(chat_id, t.SEARCHING)
     try:
         track = await _resolve_track(track_id)
         if track is None:
-            await _safe_edit(status, texts.ERR_EXPIRED)
+            await _safe_edit(status, t.ERR_EXPIRED)
             return
         bitrate = await repo.get_quality(user_id)
 
         file_id = await repo.cache_get(track.id, bitrate)
         if file_id:
-            await _send_cached(bot, chat_id, file_id, track)
+            await _send_cached(bot, chat_id, user_id, file_id, track, t)
             await repo.incr("cache_hits")
         else:
-            await _safe_edit(status, texts.DOWNLOADING)
+            await _safe_edit(status, t.DOWNLOADING)
             with tempfile.TemporaryDirectory(prefix="spdl_") as tmp:
                 res = await downloader.download(track, bitrate, tmp)
-                msg = await _send_file(bot, chat_id, res, track)
+                msg = await _send_file(bot, chat_id, user_id, res, track, t)
                 if msg.audio:
                     await repo.cache_put(
                         track.id, bitrate, msg.audio.file_id, track.title, track.artists
@@ -131,20 +147,19 @@ async def process_single(bot: Bot, chat_id: int, user_id: int, track_id: str) ->
         await repo.add_history(user_id, track.id, track.title, track.artists)
         await status.delete()
     except TrackNotFound:
-        await _safe_edit(status, texts.ERR_NOT_FOUND.format(name=html.escape(track.full_name)))
+        await _safe_edit(status, t.ERR_NOT_FOUND.format(name=html.escape(track.full_name)))
     except TooLarge:
-        await _safe_edit(status, texts.ERR_TOO_LARGE.format(name=html.escape(track.full_name)))
+        await _safe_edit(status, t.ERR_TOO_LARGE.format(name=html.escape(track.full_name)))
     except Exception:
         log.exception("Trek yuborishda xato: %s", track_id)
-        await _safe_edit(status, texts.ERR_GENERIC)
+        await _safe_edit(status, t.ERR_GENERIC)
 
 
 async def process_collection(
-    bot: Bot, chat_id: int, user_id: int, title: str, tracks: list[Track]
+    bot: Bot, chat_id: int, user_id: int, title: str, tracks: list[Track], t: Texts
 ) -> None:
-    """Albom/playlist/liked to'plamini parallel yuklab, tartib bilan yuboradi."""
     if user_id in manager.active:
-        await bot.send_message(chat_id, texts.ERR_BUSY)
+        await bot.send_message(chat_id, t.ERR_BUSY)
         return
 
     job = Job()
@@ -155,14 +170,14 @@ async def process_collection(
 
     status = await bot.send_message(
         chat_id,
-        texts.PROGRESS.format(
-            icon="⏳", title=title, bar=texts.progress_bar(0, total),
+        t.PROGRESS.format(
+            title=title, bar=progress_bar(0, total),
             done=0, total=total, sent=0, failed=0,
         ),
-        reply_markup=keyboards.cancel_button(user_id),
+        reply_markup=keyboards.cancel_button(user_id, t),
     )
 
-    sem = asyncio.Semaphore(PARALLEL_DOWNLOADS)
+    sem = asyncio.Semaphore(PARALLEL_PER_USER)
 
     async def prepare(track: Track):
         if job.cancelled:
@@ -188,7 +203,7 @@ async def process_collection(
                 tmp.cleanup()
                 return "error", None
 
-    tasks = [asyncio.create_task(prepare(t)) for t in tracks]
+    tasks = [asyncio.create_task(prepare(tr)) for tr in tracks]
     sent = failed = consumed = 0
     failed_names: list[str] = []
     last_edit = 0.0
@@ -202,7 +217,7 @@ async def process_collection(
 
             if kind == "cached":
                 try:
-                    await _send_cached(bot, chat_id, payload, track)
+                    await _send_cached(bot, chat_id, user_id, payload, track, t)
                     await repo.incr("cache_hits")
                     await repo.add_history(user_id, track.id, track.title, track.artists)
                     sent += 1
@@ -213,7 +228,7 @@ async def process_collection(
             elif kind == "file":
                 tmp, res = payload
                 try:
-                    msg = await _send_file(bot, chat_id, res, track)
+                    msg = await _send_file(bot, chat_id, user_id, res, track, t)
                     if msg.audio:
                         await repo.cache_put(
                             track.id, bitrate, msg.audio.file_id,
@@ -238,16 +253,15 @@ async def process_collection(
             if now - last_edit > 2.5 or i == total:
                 await _safe_edit(
                     status,
-                    texts.PROGRESS.format(
-                        icon="⬇️", title=title, bar=texts.progress_bar(i, total),
+                    t.PROGRESS.format(
+                        title=title, bar=progress_bar(i, total),
                         done=i, total=total, sent=sent, failed=failed,
                     ),
-                    reply_markup=keyboards.cancel_button(user_id),
+                    reply_markup=keyboards.cancel_button(user_id, t),
                 )
                 last_edit = now
             await asyncio.sleep(0.3)
     finally:
-        # Iste'mol qilinmagan tasklarni tozalaymiz (temp papkalar oqib ketmasin)
         for task in tasks[consumed:]:
             if not task.done():
                 task.cancel()
@@ -261,13 +275,13 @@ async def process_collection(
         manager.active.pop(user_id, None)
 
     if job.cancelled:
-        await _safe_edit(status, texts.COLLECTION_CANCELLED.format(sent=sent, total=total))
+        await _safe_edit(status, t.COLLECTION_CANCELLED.format(sent=sent, total=total))
         return
 
-    text = texts.COLLECTION_DONE.format(title=title, sent=sent, total=total)
+    text = t.COLLECTION_DONE.format(title=title, sent=sent, total=total)
     if failed_names:
         shown = ", ".join(failed_names[:5])
         if len(failed_names) > 5:
-            shown += f" va yana {len(failed_names) - 5} ta"
-        text += texts.COLLECTION_FAILED_LIST.format(names=shown)
+            shown += f" +{len(failed_names) - 5}"
+        text += t.COLLECTION_FAILED_LIST.format(names=shown)
     await _safe_edit(status, text)

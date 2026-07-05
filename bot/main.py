@@ -1,47 +1,65 @@
 import asyncio
 import logging
 import os
+import signal
+import sys
 
 from aiogram import BaseMiddleware, Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from aiogram.types import BotCommand
+from aiogram.types import BotCommand, ErrorEvent
 from aiohttp import web
 
 from bot.config import settings
 from bot.db import repo
 from bot.db.database import close_db, init_db
-from bot.handlers import library, links, search, settings as settings_handlers, start
+from bot.handlers import (
+    favorites,
+    library,
+    links,
+    search,
+    settings as settings_handlers,
+    start,
+)
+from bot.i18n import get_texts
 from bot.services.spotify import spotify
 from bot.web.oauth import build_app
 
 log = logging.getLogger(__name__)
 
 COMMANDS = [
-    BotCommand(command="start", description="🏠 Asosiy menyu"),
-    BotCommand(command="liked", description="❤️ Liked Songs yuklab olish"),
-    BotCommand(command="settings", description="⚙️ Sifat sozlamalari"),
-    BotCommand(command="history", description="📜 Oxirgi yuklab olinganlar"),
-    BotCommand(command="help", description="ℹ️ Qo'llanma"),
+    BotCommand(command="start", description="Menu"),
+    BotCommand(command="liked", description="Liked Songs"),
+    BotCommand(command="favorites", description="⭐ Favorites"),
+    BotCommand(command="settings", description="Settings"),
+    BotCommand(command="help", description="Help"),
 ]
 
 
-class UserMiddleware(BaseMiddleware):
-    """Har bir murojaatda foydalanuvchini bazada ro'yxatga oladi."""
+def _setup_logging() -> None:
+    is_railway = bool(os.getenv("RAILWAY_PUBLIC_DOMAIN"))
+    if is_railway:
+        fmt = '{"ts":"%(asctime)s","level":"%(levelname)s","logger":"%(name)s","msg":"%(message)s"}'
+    else:
+        fmt = "%(asctime)s %(levelname)s %(name)s: %(message)s"
+    logging.basicConfig(level=logging.INFO, format=fmt, stream=sys.stdout)
+    logging.getLogger("aiogram").setLevel(logging.WARNING)
+    logging.getLogger("aiohttp").setLevel(logging.WARNING)
 
+
+class UserMiddleware(BaseMiddleware):
     async def __call__(self, handler, event, data):
         user = data.get("event_from_user")
         if user:
             await repo.upsert_user(user.id, user.username, user.first_name)
+            lang = await repo.get_lang(user.id)
+            data["lang"] = lang
+            data["t"] = get_texts(lang)
         return await handler(event, data)
 
 
 async def main() -> None:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-    )
-
+    _setup_logging()
     await init_db(settings.db_path)
 
     bot = Bot(
@@ -51,16 +69,20 @@ async def main() -> None:
     dp = Dispatcher()
     dp.message.outer_middleware(UserMiddleware())
     dp.callback_query.outer_middleware(UserMiddleware())
+
+    @dp.errors()
+    async def on_error(event: ErrorEvent):
+        log.exception("Unhandled error: %s", event.exception)
+
     dp.include_routers(
         start.router,
         library.router,
+        favorites.router,
         settings_handlers.router,
         links.router,
-        search.router,  # catch-all matn qidiruv — oxirida turishi shart
+        search.router,
     )
 
-    # OAuth callback web-serveri (Railway shu portni tashqariga ochadi).
-    # Port band bo'lsa bot baribir ishlayveradi — faqat Spotify ulash ishlamaydi.
     runner = web.AppRunner(build_app(bot))
     await runner.setup()
     try:
@@ -77,14 +99,34 @@ async def main() -> None:
             "(Liked Songs va Spotify ulash o'chiq bo'ladi)"
         )
 
+    shutdown_event = asyncio.Event()
+
+    def _signal_handler():
+        log.info("Shutdown signal received")
+        shutdown_event.set()
+
+    loop = asyncio.get_running_loop()
+    if sys.platform != "win32":
+        for sig in (signal.SIGTERM, signal.SIGINT):
+            loop.add_signal_handler(sig, _signal_handler)
+
     try:
         await bot.set_my_commands(COMMANDS)
         await bot.delete_webhook(drop_pending_updates=True)
         log.info("Bot ishga tushdi (polling)")
-        await dp.start_polling(bot)
+        polling_task = asyncio.create_task(dp.start_polling(bot))
+        shutdown_task = asyncio.create_task(shutdown_event.wait())
+        done, _ = await asyncio.wait(
+            [polling_task, shutdown_task], return_when=asyncio.FIRST_COMPLETED
+        )
+        if shutdown_task in done:
+            await dp.stop_polling()
+            polling_task.cancel()
     finally:
+        log.info("Shutting down…")
         await runner.cleanup()
         await spotify.close()
+        await repo.flush()
         await close_db()
         await bot.session.close()
 

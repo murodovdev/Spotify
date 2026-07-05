@@ -1,11 +1,15 @@
-"""Qisqa muddatli in-memory saqlash: qidiruv natijalari va tasdiq kutayotgan to'plamlar."""
+"""Qisqa muddatli in-memory saqlash: qidiruv natijalari va tasdiq kutayotgan to'plamlar.
+
+Memory budget: ~200 entries per store, each entry ≈ 5-50 KB depending on track count.
+Worst case: 200 * 50 KB * 3 stores ≈ 30 MB.
+"""
 
 import secrets
 from collections import OrderedDict
 
 from bot.services.spotify import Track
 
-_MAX = 300
+_MAX = 200
 
 
 class _Store(OrderedDict):
@@ -17,10 +21,7 @@ class _Store(OrderedDict):
         return token
 
 
-# token -> (query, [Track])
 searches: _Store = _Store()
-
-# token -> (user_id, title, [Track])
 pending_collections: _Store = _Store()
 
 
@@ -32,17 +33,19 @@ def stash_collection(user_id: int, title: str, tracks: list[Track]) -> str:
     return pending_collections.put((user_id, title, tracks))
 
 
-# YouTube qidiruvidan kelgan treklar metadatasi ("yt:<videoId>" -> Track)
-yt_tracks: OrderedDict = OrderedDict()
+# Qidiruv natijalari — id bo'yicha (yt:, it:, dz: sintetik id'lar). Tanlanganda
+# tarmoqqa qayta murojaatsiz trekni tiklash uchun kerak.
+_MAX_TRACKS = 600
+all_tracks: OrderedDict = OrderedDict()
 
 
-def remember_yt(tracks: list[Track]) -> None:
+def remember(tracks: list[Track]) -> None:
     for t in tracks:
-        if t.id.startswith("yt:"):
-            yt_tracks[t.id] = t
-    while len(yt_tracks) > _MAX:
-        yt_tracks.popitem(last=False)
+        all_tracks[t.id] = t
+        all_tracks.move_to_end(t.id)
+    while len(all_tracks) > _MAX_TRACKS:
+        all_tracks.popitem(last=False)
 
 
-def get_yt(track_id: str) -> Track | None:
-    return yt_tracks.get(track_id)
+def get(track_id: str) -> Track | None:
+    return all_tracks.get(track_id)
