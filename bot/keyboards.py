@@ -105,6 +105,72 @@ def search_results(tracks, token: str, page: int, t: Texts, per_page: int = 6) -
     return kb.as_markup()
 
 
+def _short_button(text: str, limit: int = 58) -> str:
+    text = " ".join(text.split())
+    return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
+
+
+def _playlist_track_label(track) -> str:
+    icon = "⭐" if getattr(track, "popularity", 0) else "🎵"
+    title = track.title or "Track"
+    artist = f" — {track.artists}" if track.artists else ""
+    duration = ""
+    if track.duration:
+        mins, secs = divmod(track.duration, 60)
+        duration = f"  {mins}:{secs:02d}"
+    return _short_button(f"{icon} {title}{artist}{duration}")
+
+
+def playlist_browser(
+    tracks,
+    token: str,
+    page: int,
+    pages: int,
+    t: Texts,
+    per_page: int = 10,
+    favorites_mode: bool = False,
+) -> InlineKeyboardMarkup:
+    rows: list[list[InlineKeyboardButton]] = [
+        [
+            InlineKeyboardButton(text=t.BTN_PLAYLIST_SEARCH, callback_data=f"pl:{token}:search"),
+            InlineKeyboardButton(text=t.BTN_PLAYLIST_SHUFFLE, callback_data=f"pl:{token}:shuffle"),
+        ],
+        [
+            InlineKeyboardButton(
+                text=t.BTN_PLAYLIST_ALL if favorites_mode else t.BTN_PLAYLIST_FAVS,
+                callback_data=f"pl:{token}:all" if favorites_mode else f"pl:{token}:fav",
+            )
+        ],
+    ]
+
+    start = page * per_page
+    for idx, track in enumerate(tracks[start : start + per_page], start=start):
+        rows.append(
+            [
+                InlineKeyboardButton(
+                    text=_playlist_track_label(track),
+                    callback_data=f"pl:{token}:t:{idx}",
+                )
+            ]
+        )
+
+    if pages > 1:
+        nav = []
+        if page > 0:
+            nav.append(
+                InlineKeyboardButton(text=t.BTN_PREV, callback_data=f"pl:{token}:p:{page - 1}")
+            )
+        nav.append(InlineKeyboardButton(text=f"{page + 1}/{pages}", callback_data="noop"))
+        if page < pages - 1:
+            nav.append(
+                InlineKeyboardButton(text=t.BTN_NEXT, callback_data=f"pl:{token}:p:{page + 1}")
+            )
+        rows.append(nav)
+
+    rows.append([InlineKeyboardButton(text=t.BTN_BACK, callback_data=f"pl:{token}:back")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
 def confirm_collection(token: str, t: Texts) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[

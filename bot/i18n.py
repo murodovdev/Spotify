@@ -27,6 +27,11 @@ class Texts:
     BTN_FAV_ADD: str
     BTN_FAV_SAVED: str
     BTN_FAVORITES: str
+    BTN_PLAYLIST_SEARCH: str
+    BTN_PLAYLIST_SHUFFLE: str
+    BTN_PLAYLIST_FAVS: str
+    BTN_PLAYLIST_ALL: str
+    BTN_BACK: str
 
     # --- Sevimlilar ---
     FAV_TITLE: str
@@ -48,6 +53,12 @@ class Texts:
     # --- Qidiruv ---
     SEARCH_RESULTS: str
     SEARCH_EMPTY: str
+    PLAYLIST_HEADER: str
+    PLAYLIST_SEARCH_PROMPT: str
+    PLAYLIST_SEARCH_RESULTS: str
+    PLAYLIST_SEARCH_EMPTY: str
+    PLAYLIST_NO_FAVORITES: str
+    PLAYLIST_EMPTY: str
 
     # --- Spotify ulash ---
     CONNECT_PROMPT: str
@@ -129,6 +140,11 @@ UZ = Texts(
     BTN_FAV_ADD="🤍 Saqlash",
     BTN_FAV_SAVED="❤️ Saqlangan",
     BTN_FAVORITES="⭐ Sevimlilar",
+    BTN_PLAYLIST_SEARCH="🔎 Qidirish",
+    BTN_PLAYLIST_SHUFFLE="🎲 Shuffle",
+    BTN_PLAYLIST_FAVS="❤️ Sevimlilar",
+    BTN_PLAYLIST_ALL="🎵 Barchasi",
+    BTN_BACK="🔙 Orqaga",
 
     FAV_TITLE=(
         "⭐ <b>Sevimlilar</b>\n"
@@ -175,6 +191,20 @@ UZ = Texts(
         "<i>Sahifa {page} / {pages}</i>"
     ),
     SEARCH_EMPTY="😔 <b>«{query}»</b> bo'yicha hech narsa topilmadi.\n<i>Boshqa nom bilan urinib ko'ring.</i>",
+    PLAYLIST_HEADER=(
+        "📋 <b>{title}</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "{creator_line}"
+        "🎵 Treklar: <b>{count}</b>\n"
+        "{mode_line}"
+        "<i>Sahifa {page} / {pages}</i>\n\n"
+        "{items}"
+    ),
+    PLAYLIST_SEARCH_PROMPT="🔎 Playlist ichidan qidirish uchun qo'shiq, ijrochi, albom yoki yilni yozing.",
+    PLAYLIST_SEARCH_RESULTS="🔎 Qidiruv: <b>{query}</b>\n",
+    PLAYLIST_SEARCH_EMPTY="😔 Bu playlistda <b>{query}</b> bo'yicha hech narsa topilmadi.",
+    PLAYLIST_NO_FAVORITES="❤️ Bu playlistda saqlangan qo'shiqlar yo'q.",
+    PLAYLIST_EMPTY="😔 Playlistda trek topilmadi.",
 
     CONNECT_PROMPT=(
         "🔗 <b>Spotify'ni ulang</b>\n"
@@ -292,6 +322,11 @@ EN = Texts(
     BTN_FAV_ADD="🤍 Save",
     BTN_FAV_SAVED="❤️ Saved",
     BTN_FAVORITES="⭐ Favorites",
+    BTN_PLAYLIST_SEARCH="🔎 Search",
+    BTN_PLAYLIST_SHUFFLE="🎲 Shuffle",
+    BTN_PLAYLIST_FAVS="❤️ Favorites",
+    BTN_PLAYLIST_ALL="🎵 All tracks",
+    BTN_BACK="🔙 Back",
 
     FAV_TITLE=(
         "⭐ <b>Favorites</b>\n"
@@ -338,6 +373,20 @@ EN = Texts(
         "<i>Page {page} of {pages}</i>"
     ),
     SEARCH_EMPTY="😔 Nothing found for <b>«{query}»</b>.\n<i>Try a different name.</i>",
+    PLAYLIST_HEADER=(
+        "📋 <b>{title}</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "{creator_line}"
+        "🎵 Tracks: <b>{count}</b>\n"
+        "{mode_line}"
+        "<i>Page {page} of {pages}</i>\n\n"
+        "{items}"
+    ),
+    PLAYLIST_SEARCH_PROMPT="🔎 Type a song, artist, album, or year to search this playlist.",
+    PLAYLIST_SEARCH_RESULTS="🔎 Search: <b>{query}</b>\n",
+    PLAYLIST_SEARCH_EMPTY="😔 Nothing found for <b>{query}</b> in this playlist.",
+    PLAYLIST_NO_FAVORITES="❤️ No saved songs from this playlist yet.",
+    PLAYLIST_EMPTY="😔 No tracks found in this playlist.",
 
     CONNECT_PROMPT=(
         "🔗 <b>Connect Spotify</b>\n"
@@ -455,6 +504,11 @@ RU = Texts(
     BTN_FAV_ADD="🤍 Сохранить",
     BTN_FAV_SAVED="❤️ Сохранено",
     BTN_FAVORITES="⭐ Избранное",
+    BTN_PLAYLIST_SEARCH="🔎 Поиск",
+    BTN_PLAYLIST_SHUFFLE="🎲 Shuffle",
+    BTN_PLAYLIST_FAVS="❤️ Избранное",
+    BTN_PLAYLIST_ALL="🎵 Все треки",
+    BTN_BACK="🔙 Назад",
 
     FAV_TITLE=(
         "⭐ <b>Избранное</b>\n"
@@ -501,6 +555,20 @@ RU = Texts(
         "<i>Страница {page} из {pages}</i>"
     ),
     SEARCH_EMPTY="😔 По запросу <b>«{query}»</b> ничего не найдено.\n<i>Попробуйте другое название.</i>",
+    PLAYLIST_HEADER=(
+        "📋 <b>{title}</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "{creator_line}"
+        "🎵 Треков: <b>{count}</b>\n"
+        "{mode_line}"
+        "<i>Страница {page} из {pages}</i>\n\n"
+        "{items}"
+    ),
+    PLAYLIST_SEARCH_PROMPT="🔎 Напишите песню, исполнителя, альбом или год для поиска в плейлисте.",
+    PLAYLIST_SEARCH_RESULTS="🔎 Поиск: <b>{query}</b>\n",
+    PLAYLIST_SEARCH_EMPTY="😔 В этом плейлисте ничего не найдено по запросу <b>{query}</b>.",
+    PLAYLIST_NO_FAVORITES="❤️ В этом плейлисте пока нет сохранённых песен.",
+    PLAYLIST_EMPTY="😔 В плейлисте нет треков.",
 
     CONNECT_PROMPT=(
         "🔗 <b>Подключить Spotify</b>\n"
