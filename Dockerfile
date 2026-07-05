@@ -11,4 +11,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+ENV PYTHONUNBUFFERED=1
+ENV MAX_DOWNLOADS=4
+
 CMD ["python", "-m", "bot.main"]

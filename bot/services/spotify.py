@@ -60,6 +60,7 @@ class Track:
     year: str
     track_no: int
     video_id: str = ""  # YouTube qidiruvidan kelgan treklar uchun
+    genre: str = ""  # metadata provayderlaridan (iTunes) — mavjud bo'lsa
 
     @property
     def full_name(self) -> str:
@@ -161,10 +162,23 @@ class SpotifyClient:
     def has_credentials(self) -> bool:
         return bool(settings.spotify_client_id and settings.spotify_client_secret)
 
+    @property
+    def api_mode(self) -> bool:
+        """Rasmiy Web API ishlayotgan bo'lsa True (embed fallback'ga o'tmagan)."""
+        return self.has_credentials and not self._embed_mode
+
     async def session(self) -> aiohttp.ClientSession:
         if self._session is None or self._session.closed:
+            connector = aiohttp.TCPConnector(
+                limit=30,
+                limit_per_host=10,
+                ttl_dns_cache=300,
+                enable_cleanup_closed=True,
+                keepalive_timeout=30,
+            )
             self._session = aiohttp.ClientSession(
-                timeout=aiohttp.ClientTimeout(total=30)
+                connector=connector,
+                timeout=aiohttp.ClientTimeout(total=30),
             )
         return self._session
 
@@ -249,18 +263,30 @@ class SpotifyClient:
 
     async def _get(self, url: str, params: dict | None = None, token: str | None = None) -> dict:
         session = await self.session()
-        for _ in range(4):
+        backoff = 1.0
+        for attempt in range(4):
             tok = token or await self._app_access_token()
-            async with session.get(
-                url, params=params, headers={"Authorization": f"Bearer {tok}"}
-            ) as resp:
-                if resp.status == 429:
-                    retry = float(resp.headers.get("Retry-After", 1))
-                    await asyncio.sleep(min(retry, 15) + 0.5)
-                    continue
-                if resp.status != 200:
-                    raise SpotifyError(f"Spotify API {resp.status}: {await resp.text()}")
-                return await resp.json()
+            try:
+                async with session.get(
+                    url, params=params, headers={"Authorization": f"Bearer {tok}"}
+                ) as resp:
+                    if resp.status == 429:
+                        retry = float(resp.headers.get("Retry-After", backoff))
+                        await asyncio.sleep(min(retry, 20))
+                        backoff = min(backoff * 2, 16)
+                        continue
+                    if resp.status >= 500:
+                        await asyncio.sleep(backoff)
+                        backoff = min(backoff * 2, 16)
+                        continue
+                    if resp.status != 200:
+                        raise SpotifyError(f"Spotify API {resp.status}: {await resp.text()}")
+                    return await resp.json()
+            except (aiohttp.ClientError, asyncio.TimeoutError):
+                if attempt == 3:
+                    raise
+                await asyncio.sleep(backoff)
+                backoff = min(backoff * 2, 16)
         raise SpotifyError("Spotify API: juda ko'p urinish (rate limit)")
 
     async def _embed_entity(self, kind: str, sid: str) -> dict:

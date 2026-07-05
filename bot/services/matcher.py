@@ -31,6 +31,7 @@ _SEARCH_OPTS = {
     "extract_flat": True,
     "skip_download": True,
     "noplaylist": True,
+    "socket_timeout": 15,
 }
 
 
