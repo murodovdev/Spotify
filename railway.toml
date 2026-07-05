@@ -1,0 +1,7 @@
+[build]
+builder = "dockerfile"
+
+[deploy]
+restartPolicyType = "always"
+# Railway UI'da Volume yarating va /data ga mount qiling,
+# so'ng DB_PATH=/data/bot.db env o'zgaruvchisini qo'shing.
