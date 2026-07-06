@@ -133,6 +133,13 @@ class Texts:
     BTN_RECOGNIZE_DL: str
     BTN_VIEW_SHAZAM: str
 
+    # --- YouTube audio ---
+    YT_PROCESSING: str
+    YT_UNAVAILABLE: str
+    YT_PLAYLIST_LOADING: str
+    YT_PLAYLIST_EMPTY: str
+    YT_PLAYLIST_HINT: str
+
     # --- Video download ---
     VIDEO_DOWNLOADING: str
     VIDEO_TOO_LARGE: str
@@ -228,6 +235,12 @@ UZ = Texts(
     ),
     BTN_RECOGNIZE_DL="⬇️ Yuklab olish",
     BTN_VIEW_SHAZAM="🎵 Shazam'da ko'rish",
+
+    YT_PROCESSING="▶️ <i>YouTube audio yuklanmoqda…</i>",
+    YT_UNAVAILABLE="🔒 Bu video mavjud emas, maxfiy yoki yosh cheklovi bor.",
+    YT_PLAYLIST_LOADING="📁 <i>Playlist yuklanmoqda…</i>",
+    YT_PLAYLIST_EMPTY="📁 Bu playlist bo'sh yoki mavjud emas.",
+    YT_PLAYLIST_HINT="Yuklab olish uchun qo'shiqni tanlang",
 
     VIDEO_DOWNLOADING="📥 <i>{platform} yuklanmoqda…</i>",
     VIDEO_TOO_LARGE=(
@@ -487,6 +500,12 @@ EN = Texts(
     BTN_RECOGNIZE_DL="⬇️ Download",
     BTN_VIEW_SHAZAM="🎵 View on Shazam",
 
+    YT_PROCESSING="▶️ <i>Extracting YouTube audio…</i>",
+    YT_UNAVAILABLE="🔒 This video is unavailable, private, or age-restricted.",
+    YT_PLAYLIST_LOADING="📁 <i>Loading playlist…</i>",
+    YT_PLAYLIST_EMPTY="📁 This playlist is empty or unavailable.",
+    YT_PLAYLIST_HINT="Select a track to download",
+
     VIDEO_DOWNLOADING="📥 <i>Downloading {platform}…</i>",
     VIDEO_TOO_LARGE=(
         "⚠️ <b>Video too large</b>\n"
@@ -744,6 +763,12 @@ RU = Texts(
     ),
     BTN_RECOGNIZE_DL="⬇️ Скачать",
     BTN_VIEW_SHAZAM="🎵 Открыть в Shazam",
+
+    YT_PROCESSING="▶️ <i>Извлекаю аудио из YouTube…</i>",
+    YT_UNAVAILABLE="🔒 Это видео недоступно, приватное или с возрастным ограничением.",
+    YT_PLAYLIST_LOADING="📁 <i>Загружаю плейлист…</i>",
+    YT_PLAYLIST_EMPTY="📁 Этот плейлист пуст или недоступен.",
+    YT_PLAYLIST_HINT="Выберите трек для загрузки",
 
     VIDEO_DOWNLOADING="📥 <i>Загружаю {platform}…</i>",
     VIDEO_TOO_LARGE=(

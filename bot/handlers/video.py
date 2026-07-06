@@ -35,7 +35,11 @@ _PLATFORM_ICONS: dict[str, str] = {
 
 
 def _has_video_url(text: str) -> bool:
-    return video_dl.extract_video_url(text) is not None
+    pair = video_dl.extract_video_url(text)
+    if not pair:
+        return False
+    # YouTube URLs are handled by youtube.router (audio extraction)
+    return pair[1] != "YouTube"
 
 
 @router.message(F.text.func(_has_video_url))

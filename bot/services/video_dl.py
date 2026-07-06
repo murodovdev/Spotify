@@ -15,6 +15,17 @@ log = logging.getLogger(__name__)
 
 _executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="video_dl")
 
+_YT_RE = re.compile(
+    r"(?:https?://)?(?:(?:www\.|music\.)?youtube\.com/"
+    r"(?:watch\?(?:.*&)?v=|shorts/|live/)|youtu\.be/)([\w-]+)",
+    re.IGNORECASE,
+)
+_YT_PLAYLIST_RE = re.compile(
+    r"(?:https?://)?(?:(?:www\.|music\.)?youtube\.com/"
+    r"(?:playlist\?|watch\?.*&?)list=)([\w-]+)",
+    re.IGNORECASE,
+)
+
 # (platform_name, compiled_pattern)
 _PLATFORMS: list[tuple[str, re.Pattern]] = [
     ("Instagram", re.compile(
@@ -180,3 +191,106 @@ async def download_video(url: str, platform: str, tmpdir: str) -> VideoInfo:
 async def download_audio(url: str, tmpdir: str) -> str:
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(_executor, _ydl_download_audio, url, tmpdir)
+
+
+# ─── YouTube helpers ─────────────────────────────────────────────────────────
+
+def extract_yt_video_id(text: str) -> str | None:
+    m = _YT_RE.search(text)
+    return m.group(1) if m else None
+
+
+def extract_yt_playlist_id(text: str) -> str | None:
+    m = _YT_PLAYLIST_RE.search(text)
+    return m.group(1) if m else None
+
+
+def is_youtube_url(text: str) -> bool:
+    return _YT_RE.search(text) is not None
+
+
+@dataclass
+class YTVideoMeta:
+    video_id: str
+    title: str
+    channel: str
+    duration: int
+    thumbnail: str
+
+
+def _ydl_extract_meta(video_id: str) -> YTVideoMeta:
+    import yt_dlp
+    opts = {
+        "quiet": True,
+        "no_warnings": True,
+        "noplaylist": True,
+        "skip_download": True,
+        "socket_timeout": 20,
+        "extractor_args": {"youtube": {"player_client": ["android", "web_safari"]}},
+    }
+    with yt_dlp.YoutubeDL(opts) as ydl:
+        info = ydl.extract_info(
+            f"https://www.youtube.com/watch?v={video_id}", download=False,
+        )
+    if not info:
+        raise ValueError("No metadata returned")
+    return YTVideoMeta(
+        video_id=video_id,
+        title=info.get("title") or "",
+        channel=info.get("uploader") or info.get("channel") or "",
+        duration=int(info.get("duration") or 0),
+        thumbnail=info.get("thumbnail") or f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg",
+    )
+
+
+@dataclass
+class YTPlaylistMeta:
+    playlist_id: str
+    title: str
+    channel: str
+    entries: list[YTVideoMeta]
+
+
+def _ydl_extract_playlist(playlist_id: str) -> YTPlaylistMeta:
+    import yt_dlp
+    opts = {
+        "quiet": True,
+        "no_warnings": True,
+        "skip_download": True,
+        "extract_flat": True,
+        "socket_timeout": 20,
+    }
+    url = f"https://www.youtube.com/playlist?list={playlist_id}"
+    with yt_dlp.YoutubeDL(opts) as ydl:
+        info = ydl.extract_info(url, download=False)
+    if not info:
+        raise ValueError("No playlist metadata returned")
+
+    entries: list[YTVideoMeta] = []
+    for e in info.get("entries") or []:
+        if not e:
+            continue
+        vid = e.get("id") or e.get("url") or ""
+        entries.append(YTVideoMeta(
+            video_id=vid,
+            title=e.get("title") or "",
+            channel=e.get("uploader") or e.get("channel") or info.get("uploader") or "",
+            duration=int(e.get("duration") or 0),
+            thumbnail=e.get("thumbnail") or f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg",
+        ))
+    return YTPlaylistMeta(
+        playlist_id=playlist_id,
+        title=info.get("title") or "YouTube Playlist",
+        channel=info.get("uploader") or info.get("channel") or "",
+        entries=entries,
+    )
+
+
+async def extract_yt_meta(video_id: str) -> YTVideoMeta:
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(_executor, _ydl_extract_meta, video_id)
+
+
+async def extract_yt_playlist(playlist_id: str) -> YTPlaylistMeta:
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(_executor, _ydl_extract_playlist, playlist_id)
