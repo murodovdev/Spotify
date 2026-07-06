@@ -1,4 +1,4 @@
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, SwitchInlineQueryChosenChat
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from bot.i18n import LANG_LABELS, Texts
@@ -157,6 +157,95 @@ def settings_kb(quality: str, lang: str, t: Texts) -> InlineKeyboardMarkup:
             ],
         ]
     )
+
+
+def post_download_kb(track, t: Texts, is_fav: bool = False) -> InlineKeyboardMarkup:
+    """Full interactive keyboard shown after single-track download."""
+    kb = InlineKeyboardBuilder()
+
+    # Row 1: Share (inline mode) + Save to Favorites
+    kb.row(
+        InlineKeyboardButton(
+            text=t.BTN_SHARE,
+            switch_inline_query=f"tid:{track.id}",
+        ),
+        InlineKeyboardButton(
+            text=t.BTN_FAV_SAVED if is_fav else t.BTN_FAV_ADD,
+            callback_data=f"fav:{track.id}",
+        ),
+    )
+
+    # Row 2: Similar Songs + Edit Audio + Edit Info
+    kb.row(
+        InlineKeyboardButton(text=t.BTN_SIMILAR, callback_data=f"sim:{track.id}"),
+        InlineKeyboardButton(text=t.BTN_EFFECTS, callback_data=f"ea:{track.id}"),
+        InlineKeyboardButton(text=t.BTN_EDIT_META, callback_data=f"em:{track.id}"),
+    )
+
+    # Row 3: Open link + Album (if available)
+    row3: list[InlineKeyboardButton] = []
+    if track.id.startswith("yt:"):
+        row3.append(InlineKeyboardButton(text="▶️ YouTube", url=track.url))
+    else:
+        row3.append(InlineKeyboardButton(text=t.BTN_OPEN, url=track.url))
+    if track.album_id:
+        row3.append(InlineKeyboardButton(text=t.BTN_ALBUM, callback_data=f"dl:a:{track.album_id}"))
+    kb.row(*row3)
+
+    # Row 4: Artist (if available)
+    if track.artist_id:
+        kb.row(InlineKeyboardButton(text=t.BTN_ARTIST, callback_data=f"dl:ar:{track.artist_id}"))
+
+    return kb.as_markup()
+
+
+def audio_effects_kb(track_id: str, t: Texts) -> InlineKeyboardMarkup:
+    """Audio effects submenu — replaces post_download_kb on the audio message."""
+    kb = InlineKeyboardBuilder()
+    effects = [
+        ("🎧 8D Audio",    "8d"),
+        ("🔊 Bass Boost",  "bass"),
+        ("🌌 Reverb",      "reverb"),
+        ("🎵 Acoustic",    "acoustic"),
+        ("🎤 Vocal Boost", "vocal"),
+        ("🎶 Slowed",      "slowed"),
+        ("⚡ Nightcore",   "nightcore"),
+        ("🌙 Lo-Fi",       "lofi"),
+    ]
+    for i in range(0, len(effects), 2):
+        kb.row(*[
+            InlineKeyboardButton(text=label, callback_data=f"ea:apply:{key}:{track_id}")
+            for label, key in effects[i:i + 2]
+        ])
+    kb.row(InlineKeyboardButton(text=t.BTN_BACK, callback_data=f"ea:back:{track_id}"))
+    return kb.as_markup()
+
+
+def metadata_editor_kb(track_id: str, t: Texts) -> InlineKeyboardMarkup:
+    """Metadata editor — replaces post_download_kb on the audio message."""
+    kb = InlineKeyboardBuilder()
+    fields = [
+        (t.BTN_META_TITLE,  "title"),
+        (t.BTN_META_ARTIST, "artist"),
+        (t.BTN_META_ALBUM,  "album"),
+        (t.BTN_META_YEAR,   "year"),
+        (t.BTN_META_GENRE,  "genre"),
+        (t.BTN_META_COVER,  "cover"),
+    ]
+    for i in range(0, len(fields), 2):
+        kb.row(*[
+            InlineKeyboardButton(text=label, callback_data=f"em:f:{key}:{track_id}")
+            for label, key in fields[i:i + 2]
+        ])
+    kb.row(InlineKeyboardButton(text=t.BTN_BACK, callback_data=f"em:back:{track_id}"))
+    return kb.as_markup()
+
+
+def cancel_meta_kb(track_id: str, t: Texts) -> InlineKeyboardMarkup:
+    """Single-button keyboard for field-input prompts."""
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text=t.BTN_META_CANCEL, callback_data=f"em:cancel:{track_id}")
+    ]])
 
 
 def playlist_browser(

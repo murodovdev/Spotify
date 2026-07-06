@@ -18,6 +18,7 @@ from bot.handlers import (
     library,
     links,
     playlist,
+    post_download,
     search,
     settings as settings_handlers,
     start,
@@ -82,6 +83,7 @@ async def main() -> None:
         settings_handlers.router,
         links.router,
         playlist.router,
+        post_download.router,  # before search.router — FSM state handlers take priority
         search.router,
     )
 
