@@ -24,6 +24,7 @@ from bot.handlers import (
     settings as settings_handlers,
     start,
     video,
+    youtube,
 )
 from bot.i18n import get_texts
 from bot.services.spotify import spotify
@@ -87,6 +88,7 @@ async def main() -> None:
         playlist.router,
         post_download.router,  # before search.router — FSM state handlers take priority
         recognize.router,      # media messages (audio/voice/video/video_note) → recognition
+        youtube.router,        # YouTube links → audio extraction
         video.router,          # social media video links → download + Find Music
         search.router,
     )
