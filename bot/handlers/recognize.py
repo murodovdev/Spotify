@@ -110,7 +110,7 @@ async def handle_media(message: Message, t: Texts, bot: Bot) -> None:
         lines.append(f"⏱ {mins}:{secs:02d}")
 
     caption = "\n".join(lines)
-    reply_markup = keyboards.recognize_result_kb(track, t, result.get("share_url", "")) if track else None
+    reply_markup = keyboards.recognize_result_kb(track, t) if track else None
 
     await status.delete()
 

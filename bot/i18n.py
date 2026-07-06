@@ -23,7 +23,6 @@ class Texts:
     BTN_PREV: str
     BTN_NEXT: str
     BTN_LANG: str
-    BTN_OPEN: str
     BTN_FAV_ADD: str
     BTN_FAV_SAVED: str
     BTN_FAVORITES: str
@@ -131,7 +130,6 @@ class Texts:
     RECOGNIZE_NOT_FOUND: str
     RECOGNIZE_TOO_LARGE: str
     BTN_RECOGNIZE_DL: str
-    BTN_VIEW_SHAZAM: str
 
     # --- YouTube audio ---
     YT_PROCESSING: str
@@ -234,7 +232,6 @@ UZ = Texts(
         "Telegram 20 MB dan katta faylni yuklab ololmaydi."
     ),
     BTN_RECOGNIZE_DL="⬇️ Yuklab olish",
-    BTN_VIEW_SHAZAM="🎵 Shazam'da ko'rish",
 
     YT_PROCESSING="▶️ <i>YouTube audio yuklanmoqda…</i>",
     YT_UNAVAILABLE="🔒 Bu video mavjud emas, maxfiy yoki yosh cheklovi bor.",
@@ -263,7 +260,6 @@ UZ = Texts(
     BTN_PREV="⬅️ Oldingi",
     BTN_NEXT="Keyingi ➡️",
     BTN_LANG="🌐 Tilni o'zgartirish",
-    BTN_OPEN="🔗 Spotify'da ochish",
     BTN_FAV_ADD="🤍 Saqlash",
     BTN_FAV_SAVED="❤️ Saqlangan",
     BTN_FAVORITES="⭐ Sevimlilar",
@@ -498,7 +494,6 @@ EN = Texts(
         "Telegram can't download files over 20 MB."
     ),
     BTN_RECOGNIZE_DL="⬇️ Download",
-    BTN_VIEW_SHAZAM="🎵 View on Shazam",
 
     YT_PROCESSING="▶️ <i>Extracting YouTube audio…</i>",
     YT_UNAVAILABLE="🔒 This video is unavailable, private, or age-restricted.",
@@ -527,7 +522,6 @@ EN = Texts(
     BTN_PREV="⬅️ Prev",
     BTN_NEXT="Next ➡️",
     BTN_LANG="🌐 Change language",
-    BTN_OPEN="🔗 Open in Spotify",
     BTN_FAV_ADD="🤍 Save",
     BTN_FAV_SAVED="❤️ Saved",
     BTN_FAVORITES="⭐ Favorites",
@@ -762,7 +756,6 @@ RU = Texts(
         "Telegram не может скачать файлы больше 20 МБ."
     ),
     BTN_RECOGNIZE_DL="⬇️ Скачать",
-    BTN_VIEW_SHAZAM="🎵 Открыть в Shazam",
 
     YT_PROCESSING="▶️ <i>Извлекаю аудио из YouTube…</i>",
     YT_UNAVAILABLE="🔒 Это видео недоступно, приватное или с возрастным ограничением.",
@@ -791,7 +784,6 @@ RU = Texts(
     BTN_PREV="⬅️ Назад",
     BTN_NEXT="Вперёд ➡️",
     BTN_LANG="🌐 Изменить язык",
-    BTN_OPEN="🔗 Открыть в Spotify",
     BTN_FAV_ADD="🤍 Сохранить",
     BTN_FAV_SAVED="❤️ Сохранено",
     BTN_FAVORITES="⭐ Избранное",
