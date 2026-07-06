@@ -19,6 +19,7 @@ from bot.handlers import (
     links,
     playlist,
     post_download,
+    recognize,
     search,
     settings as settings_handlers,
     start,
@@ -84,6 +85,7 @@ async def main() -> None:
         links.router,
         playlist.router,
         post_download.router,  # before search.router — FSM state handlers take priority
+        recognize.router,      # media messages (audio/voice/video/video_note) → recognition
         search.router,
     )
 

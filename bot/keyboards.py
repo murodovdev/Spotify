@@ -241,6 +241,28 @@ def metadata_editor_kb(track_id: str, t: Texts) -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
+def recognize_result_kb(track, t: Texts, shazam_url: str = "") -> InlineKeyboardMarkup:
+    """Keyboard shown after successful music recognition."""
+    kb = InlineKeyboardBuilder()
+    # Row 1: Download + Save to Favorites
+    kb.row(
+        InlineKeyboardButton(text=t.BTN_RECOGNIZE_DL, callback_data=f"dl:t:{track.id}"),
+        InlineKeyboardButton(text=t.BTN_FAV_ADD, callback_data=f"fav:{track.id}"),
+    )
+    # Row 2: Similar Songs + Share
+    kb.row(
+        InlineKeyboardButton(text=t.BTN_SIMILAR, callback_data=f"sim:{track.id}"),
+        InlineKeyboardButton(
+            text=t.BTN_SHARE,
+            switch_inline_query=f"tid:{track.id}",
+        ),
+    )
+    # Row 3: View on Shazam (optional)
+    if shazam_url:
+        kb.row(InlineKeyboardButton(text=t.BTN_VIEW_SHAZAM, url=shazam_url))
+    return kb.as_markup()
+
+
 def cancel_meta_kb(track_id: str, t: Texts) -> InlineKeyboardMarkup:
     """Single-button keyboard for field-input prompts."""
     return InlineKeyboardMarkup(inline_keyboard=[[
