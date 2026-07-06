@@ -88,7 +88,8 @@ async def main() -> None:
     runner = web.AppRunner(build_app(bot))
     await runner.setup()
     try:
-        host = "0.0.0.0" if os.getenv("RAILWAY_PUBLIC_DOMAIN") else "127.0.0.1"
+        # RAILWAY_ENVIRONMENT har doim Railway da set bo'ladi (public domain bo'lmasa ham).
+        host = "0.0.0.0" if os.getenv("RAILWAY_ENVIRONMENT") else "127.0.0.1"
         site = web.TCPSite(runner, host, settings.port)
         await site.start()
         log.info("OAuth server: %s:%s (redirect: %s)", host, settings.port, settings.redirect_uri)
