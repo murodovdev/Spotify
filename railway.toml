@@ -4,6 +4,6 @@ builder = "dockerfile"
 [deploy]
 restartPolicyType = "always"
 healthcheckPath = "/health"
-healthcheckTimeout = 10
+healthcheckTimeout = 60
 # Railway UI'da Volume yarating va /data ga mount qiling,
 # so'ng DB_PATH=/data/bot.db env o'zgaruvchisini qo'shing.
