@@ -62,6 +62,7 @@ class Track:
     popularity: int = 0
     video_id: str = ""  # YouTube qidiruvidan kelgan treklar uchun
     genre: str = ""  # metadata provayderlaridan (iTunes) — mavjud bo'lsa
+    sim: float = 0.0  # o'xshashlik bali 0..1 — faqat "O'xshash qo'shiqlar" uchun
 
     @property
     def full_name(self) -> str:

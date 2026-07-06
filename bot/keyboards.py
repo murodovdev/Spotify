@@ -101,8 +101,12 @@ def search_results(tracks, token: str, page: int, t: Texts, per_page: int = 6) -
         label = f"{tr.artists} — {tr.title}".strip(" —") or "🎵"
         if len(label) > 48:
             label = label[:47] + "…"
+        meta = f"{mins}:{secs:02d}"
+        sim = getattr(tr, "sim", 0.0)
+        if sim > 0:
+            meta = f"{meta}  ·  {round(sim * 100)}% 🎯"
         kb.button(
-            text=f"🎵 {label}  ·  {mins}:{secs:02d}",
+            text=f"🎵 {label}  ·  {meta}",
             callback_data=f"dl:t:{tr.id}",
         )
     kb.adjust(1)
