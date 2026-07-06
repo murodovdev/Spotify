@@ -224,14 +224,11 @@ def _ydl_extract_meta(video_id: str) -> YTVideoMeta:
         "quiet": True,
         "no_warnings": True,
         "noplaylist": True,
-        "skip_download": True,
         "socket_timeout": 20,
-        "extractor_args": {"youtube": {"player_client": ["android", "web_safari"]}},
     }
+    url = f"https://www.youtube.com/watch?v={video_id}"
     with yt_dlp.YoutubeDL(opts) as ydl:
-        info = ydl.extract_info(
-            f"https://www.youtube.com/watch?v={video_id}", download=False,
-        )
+        info = ydl.extract_info(url, download=False)
     if not info:
         raise ValueError("No metadata returned")
     return YTVideoMeta(
