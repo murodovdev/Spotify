@@ -149,9 +149,21 @@ async def inline_share(query: InlineQuery) -> None:
     if not file_id:
         await query.answer([], cache_time=10, is_personal=True)
         return
+
+    track = await _resolve_track(track_id)
+    if track:
+        caption = (
+            f"🎵 {html.escape(track.title)}\n"
+            f"👤 {html.escape(track.artists)}\n\n"
+            "✨ Shared via @track_drop_bot"
+        )
+    else:
+        caption = "✨ Shared via @track_drop_bot"
+
     result = InlineQueryResultCachedAudio(
-        id=track_id[-63:],   # ID ≤ 64 chars, unique per track
+        id=track_id[-63:],
         audio_file_id=file_id,
+        caption=caption,
     )
     await query.answer([result], cache_time=300, is_personal=True)
 
