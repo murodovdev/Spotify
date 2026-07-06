@@ -139,9 +139,18 @@ async def cb_noop(cq: CallbackQuery) -> None:
 # ─── Inline query: Share ──────────────────────────────────────────────────────
 # Requires inline mode enabled in BotFather (@<botname> → Bot Settings → Inline Mode).
 
-@router.inline_query(F.query.startswith("tid:"))
+@router.inline_query()
 async def inline_share(query: InlineQuery) -> None:
-    track_id = query.query[4:].strip()
+    raw = query.query.strip()
+    if not raw:
+        await query.answer([], cache_time=10, is_personal=True)
+        return
+
+    track_id = store.resolve_share(raw)
+    if not track_id:
+        await query.answer([], cache_time=10, is_personal=True)
+        return
+
     file_id = (
         await repo.cache_get(track_id, "320") or
         await repo.cache_get(track_id, "128")

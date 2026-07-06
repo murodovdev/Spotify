@@ -2,6 +2,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, SwitchInli
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from bot.i18n import LANG_LABELS, Texts
+from bot import store
 
 
 def lang_picker(prefix: str = "lang") -> InlineKeyboardMarkup:
@@ -164,10 +165,11 @@ def post_download_kb(track, t: Texts, is_fav: bool = False) -> InlineKeyboardMar
     kb = InlineKeyboardBuilder()
 
     # Row 1: Share (inline mode) + Save to Favorites
+    share_query = store.stash_share(track)
     kb.row(
         InlineKeyboardButton(
             text=t.BTN_SHARE,
-            switch_inline_query=f"tid:{track.id}",
+            switch_inline_query=share_query,
         ),
         InlineKeyboardButton(
             text=t.BTN_FAV_SAVED if is_fav else t.BTN_FAV_ADD,
@@ -250,11 +252,12 @@ def recognize_result_kb(track, t: Texts, shazam_url: str = "") -> InlineKeyboard
         InlineKeyboardButton(text=t.BTN_FAV_ADD, callback_data=f"fav:{track.id}"),
     )
     # Row 2: Similar Songs + Share
+    share_query = store.stash_share(track)
     kb.row(
         InlineKeyboardButton(text=t.BTN_SIMILAR, callback_data=f"sim:{track.id}"),
         InlineKeyboardButton(
             text=t.BTN_SHARE,
-            switch_inline_query=f"tid:{track.id}",
+            switch_inline_query=share_query,
         ),
     )
     # Row 3: View on Shazam (optional)
