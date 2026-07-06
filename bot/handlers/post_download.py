@@ -26,7 +26,7 @@ from mutagen.id3._util import ID3NoHeaderError
 from bot import keyboards, store
 from bot.db import repo
 from bot.i18n import Texts, track_caption
-from bot.services import audio_effects, downloader, search_engine
+from bot.services import audio_effects, downloader, recommender
 from bot.services.spotify import Track, spotify
 
 log = logging.getLogger(__name__)
@@ -168,25 +168,24 @@ async def cb_similar(cq: CallbackQuery, t: Texts) -> None:
 
     await cq.answer(t.SIMILAR_SEARCHING)
 
-    query = track.artists or track.title
     try:
-        tracks = await search_engine.search(query)
+        tracks = await recommender.get_similar(track)
     except Exception:
-        log.exception("Similar search error: %s", query)
+        log.exception("Similar search error for track %s", track_id)
         await cq.message.answer(t.SIMILAR_EMPTY)
         return
 
-    tracks = [tr for tr in tracks if tr.id != track_id]
     if not tracks:
         await cq.message.answer(t.SIMILAR_EMPTY)
         return
 
     store.remember(tracks)
-    token = store.stash_search(query, tracks)
+    label = track.title or track.artists
+    token = store.stash_search(label, tracks)
     pages = ceil(len(tracks) / 6)
     await cq.message.answer(
         t.SIMILAR_TITLE.format(
-            artist=html.escape(track.artists or track.title),
+            title=html.escape(label),
             page=1, pages=pages,
         ),
         reply_markup=keyboards.search_results(tracks, token, 0, t, 6),

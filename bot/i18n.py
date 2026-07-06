@@ -192,7 +192,7 @@ UZ = Texts(
 
     SIMILAR_SEARCHING="🎧 O'xshash qo'shiqlar qidirilmoqda…",
     SIMILAR_TITLE=(
-        "🎧 <b>«{artist}»</b> ga o'xshash\n"
+        "🎧 <b>«{title}»</b> ga o'xshash qo'shiqlar\n"
         "<i>Sahifa {page} / {pages}</i>"
     ),
     SIMILAR_EMPTY="😔 O'xshash qo'shiqlar topilmadi.",
@@ -440,7 +440,7 @@ EN = Texts(
 
     SIMILAR_SEARCHING="🎧 Finding similar tracks…",
     SIMILAR_TITLE=(
-        "🎧 <b>Similar to «{artist}»</b>\n"
+        "🎧 <b>Songs similar to «{title}»</b>\n"
         "<i>Page {page} of {pages}</i>"
     ),
     SIMILAR_EMPTY="😔 No similar tracks found.",
@@ -688,7 +688,7 @@ RU = Texts(
 
     SIMILAR_SEARCHING="🎧 Ищу похожие треки…",
     SIMILAR_TITLE=(
-        "🎧 <b>Похожее на «{artist}»</b>\n"
+        "🎧 <b>Похожие на «{title}»</b>\n"
         "<i>Страница {page} из {pages}</i>"
     ),
     SIMILAR_EMPTY="😔 Похожих треков не найдено.",

@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     encryption_key: str = ""
     db_path: str = "data/bot.db"
     port: int = 8080
+    lastfm_api_key: str = ""
 
     @property
     def redirect_uri(self) -> str:
