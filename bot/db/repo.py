@@ -189,6 +189,53 @@ async def is_connected(user_id: int) -> bool:
     return await get_tokens(user_id) is not None
 
 
+# --- Tavsiya dvigateli keshlari ---
+
+_REC_FEAT_MAX = 25_000
+
+
+async def rec_feat_get(key: str) -> str | None:
+    cur = await db().execute("SELECT payload FROM rec_features WHERE key=?", (key,))
+    row = await cur.fetchone()
+    return row["payload"] if row else None
+
+
+async def rec_feat_put(key: str, payload: str) -> None:
+    await db().execute(
+        """INSERT INTO rec_features(key, payload, updated_at) VALUES(?,?,?)
+           ON CONFLICT(key) DO UPDATE SET payload=excluded.payload,
+                                          updated_at=excluded.updated_at""",
+        (key, payload, time.time()),
+    )
+    # Vaqti-vaqti bilan eng eski yozuvlarni tozalaymiz (jadval cheksiz o'smasin)
+    if int(time.time()) % 97 == 0:
+        await db().execute(
+            """DELETE FROM rec_features WHERE key NOT IN
+               (SELECT key FROM rec_features ORDER BY updated_at DESC LIMIT ?)""",
+            (_REC_FEAT_MAX,),
+        )
+    await _mark_dirty()
+
+
+async def rec_shown_get(user_id: int, seed_key: str, since: float) -> set[str]:
+    cur = await db().execute(
+        "SELECT track_key FROM rec_shown WHERE user_id=? AND seed_key=? AND shown_at>=?",
+        (user_id, seed_key, since),
+    )
+    return {row["track_key"] for row in await cur.fetchall()}
+
+
+async def rec_shown_add(user_id: int, seed_key: str, track_keys: list[str]) -> None:
+    now = time.time()
+    await db().executemany(
+        """INSERT INTO rec_shown(user_id, seed_key, track_key, shown_at) VALUES(?,?,?,?)
+           ON CONFLICT(user_id, seed_key, track_key) DO UPDATE SET shown_at=excluded.shown_at""",
+        [(user_id, seed_key, k, now) for k in track_keys],
+    )
+    await db().execute("DELETE FROM rec_shown WHERE shown_at < ?", (now - 45 * 86400,))
+    await _mark_dirty()
+
+
 # --- Statistika ---
 
 async def incr(key: str, by: int = 1) -> None:

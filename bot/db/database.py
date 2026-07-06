@@ -52,6 +52,23 @@ CREATE TABLE IF NOT EXISTS favorites(
     PRIMARY KEY (user_id, spotify_id)
 );
 CREATE INDEX IF NOT EXISTS idx_favorites_user ON favorites(user_id, created_at DESC);
+
+-- Tavsiya dvigateli: trek xususiyatlari keshi (Deezer/iTunes/MBID/audio-vektor JSON)
+CREATE TABLE IF NOT EXISTS rec_features(
+    key         TEXT PRIMARY KEY,
+    payload     TEXT NOT NULL,
+    updated_at  REAL NOT NULL
+);
+
+-- Tavsiya dvigateli: rotatsiya xotirasi — (user, seed) uchun ko'rsatilgan treklar
+CREATE TABLE IF NOT EXISTS rec_shown(
+    user_id    INTEGER NOT NULL,
+    seed_key   TEXT NOT NULL,
+    track_key  TEXT NOT NULL,
+    shown_at   REAL NOT NULL,
+    PRIMARY KEY (user_id, seed_key, track_key)
+);
+CREATE INDEX IF NOT EXISTS idx_rec_shown_time ON rec_shown(shown_at);
 """
 
 _db: aiosqlite.Connection | None = None
