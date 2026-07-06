@@ -369,23 +369,14 @@ class SpotifyClient:
 
         return await self._call(api, emb)
 
-    async def playlist(self, playlist_id: str) -> Playlist:
+    async def playlist(self, playlist_id: str) -> tuple[str, list[Track]]:
         async def api():
             meta = await self._get(
-                f"{API}/playlists/{playlist_id}",
-                params={"fields": "name,owner(display_name),images,tracks(total)"},
+                f"{API}/playlists/{playlist_id}", params={"fields": "name"}
             )
-            images = meta.get("images") or []
-            cover = images[0]["url"] if images else ""
             tracks: list[Track] = []
             url: str | None = f"{API}/playlists/{playlist_id}/tracks"
-            params = {
-                "limit": 100,
-                "fields": (
-                    "items(track(id,type,name,artists(id,name),album(id,name,images,release_date),"
-                    "duration_ms,track_number,popularity)),next"
-                ),
-            }
+            params = {"limit": 100}
             while url:
                 page = await self._get(url, params=params)
                 params = None
@@ -394,33 +385,62 @@ class SpotifyClient:
                     if t and t.get("id") and t.get("type", "track") == "track":
                         tracks.append(_parse_track(t))
                 url = page.get("next")
-            total = ((meta.get("tracks") or {}).get("total")) or len(tracks)
+            return meta["name"], tracks
+
+        async def emb():
+            e = await self._embed_entity("playlist", playlist_id)
+            name = e.get("name") or e.get("title") or ""
+            tracks = [
+                _parse_embed_item(item)
+                for item in e.get("trackList") or []
+                if item.get("uri")
+            ]
+            return name, tracks
+
+        return await self._call(api, emb)
+
+    async def playlist_info(self, playlist_id: str) -> Playlist:
+        """Playlist metadatasi + treklar — interaktiv brauzer uchun.
+
+        Nomi, egasi, muqovasi va to'liq trek ro'yxatini qaytaradi.
+        """
+        async def api():
+            meta = await self._get(
+                f"{API}/playlists/{playlist_id}",
+                params={"fields": "name,owner(display_name),images"},
+            )
+            images = meta.get("images") or []
+            cover = images[0]["url"] if images else ""
+            tracks: list[Track] = []
+            url: str | None = f"{API}/playlists/{playlist_id}/tracks"
+            params = {"limit": 100}
+            while url:
+                page = await self._get(url, params=params)
+                params = None
+                for item in page.get("items", []):
+                    t = item.get("track")
+                    if t and t.get("id") and t.get("type", "track") == "track":
+                        tracks.append(_parse_track(t))
+                url = page.get("next")
             return Playlist(
-                title=meta.get("name") or "",
+                title=meta.get("name", ""),
                 creator=(meta.get("owner") or {}).get("display_name") or "",
-                total=total,
+                total=len(tracks),
                 cover_url=cover,
                 tracks=tracks,
             )
 
         async def emb():
             e = await self._embed_entity("playlist", playlist_id)
-            name = e.get("name") or e.get("title") or ""
             cover, _ = _embed_images(e)
-            creator = (
-                e.get("subtitle")
-                or (e.get("owner") or {}).get("name")
-                or (e.get("profile") or {}).get("name")
-                or ""
-            )
             tracks = [
                 _parse_embed_item(item)
                 for item in e.get("trackList") or []
                 if item.get("uri")
             ]
             return Playlist(
-                title=name,
-                creator=creator,
+                title=e.get("name") or e.get("title") or "",
+                creator=e.get("subtitle") or "",
                 total=len(tracks),
                 cover_url=cover,
                 tracks=tracks,
