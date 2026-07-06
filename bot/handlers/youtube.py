@@ -49,6 +49,25 @@ def _yt_track(meta: video_dl.YTVideoMeta) -> Track:
     )
 
 
+def _minimal_track(video_id: str) -> Track:
+    thumb = f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
+    mqthumb = f"https://i.ytimg.com/vi/{video_id}/mqdefault.jpg"
+    return Track(
+        id=f"yt:{video_id}",
+        title="",
+        artists="",
+        artist_id="",
+        album="",
+        album_id="",
+        duration=0,
+        cover_url=thumb,
+        thumb_url=mqthumb,
+        year="",
+        track_no=0,
+        video_id=video_id,
+    )
+
+
 # ─── Single video ────────────────────────────────────────────────────────────
 
 @router.message(F.text.func(_is_youtube_url))
@@ -66,35 +85,45 @@ async def handle_youtube_link(message: Message, t: Texts, bot: Bot) -> None:
 
     status = await message.answer(t.YT_PROCESSING)
 
+    # Try to get metadata first (non-blocking, best-effort)
+    track: Track | None = None
     try:
         meta = await video_dl.extract_yt_meta(video_id)
+        track = _yt_track(meta)
     except Exception:
-        log.exception("YouTube metadata extraction failed: %s", video_id)
-        await status.edit_text(t.YT_UNAVAILABLE)
-        return
+        log.debug("YouTube metadata extraction failed for %s, will get info during download", video_id)
 
-    track = _yt_track(meta)
+    if track is None:
+        track = _minimal_track(video_id)
+
     store.remember([track])
 
-    esc = html.escape
-    info_text = (
-        f"▶️ <b>YouTube</b>\n"
-        f"🎵 <b>{esc(track.title)}</b>\n"
-        f"👤 {esc(track.artists)}"
-    )
-    if track.duration:
-        mins, secs = divmod(track.duration, 60)
-        info_text += f"\n⏱ {mins}:{secs:02d}"
-    info_text += f"\n\n{t.DOWNLOADING}"
-
-    try:
-        await status.edit_text(info_text)
-    except Exception:
-        pass
+    # Show info card if we have metadata
+    if track.title:
+        esc = html.escape
+        info_text = (
+            f"▶️ <b>YouTube</b>\n"
+            f"🎵 <b>{esc(track.title)}</b>\n"
+            f"👤 {esc(track.artists)}"
+        )
+        if track.duration:
+            mins, secs = divmod(track.duration, 60)
+            info_text += f"\n⏱ {mins}:{secs:02d}"
+        info_text += f"\n\n{t.DOWNLOADING}"
+        try:
+            await status.edit_text(info_text)
+        except Exception:
+            pass
+    else:
+        try:
+            await status.edit_text(t.DOWNLOADING)
+        except Exception:
+            pass
 
     user_id = message.from_user.id
     bitrate = await repo.get_quality(user_id)
 
+    # Check cache
     file_id = await repo.cache_get(track.id, bitrate)
     if file_id:
         is_fav = await repo.is_favorite(user_id, track.id)
@@ -109,9 +138,15 @@ async def handle_youtube_link(message: Message, t: Texts, bot: Bot) -> None:
         await status.delete()
         return
 
+    # Download audio
     try:
         with tempfile.TemporaryDirectory(prefix="ytdl_") as tmpdir:
-            res: Downloaded = await downloader.download(track, bitrate, tmpdir)
+            res = await downloader.download(track, bitrate, tmpdir)
+
+            # If metadata was missing, try to read title/artist from the downloaded MP3 tags
+            if not track.title:
+                track = _enrich_from_file(track, res.mp3_path)
+                store.remember([track])
 
             thumb = FSInputFile(res.thumb_path) if res.thumb_path else None
             is_fav = await repo.is_favorite(user_id, track.id)
@@ -119,8 +154,8 @@ async def handle_youtube_link(message: Message, t: Texts, bot: Bot) -> None:
             msg = await bot.send_audio(
                 chat_id=message.chat.id,
                 audio=FSInputFile(res.mp3_path),
-                title=track.title,
-                performer=track.artists,
+                title=track.title or None,
+                performer=track.artists or None,
                 duration=track.duration or None,
                 thumbnail=thumb,
                 caption=track_caption(track),
@@ -138,16 +173,28 @@ async def handle_youtube_link(message: Message, t: Texts, bot: Bot) -> None:
         await status.delete()
 
     except TrackNotFound:
-        await status.edit_text(
-            t.ERR_NOT_FOUND.format(name=esc(track.full_name))
-        )
+        await status.edit_text(t.YT_UNAVAILABLE)
     except TooLarge:
-        await status.edit_text(
-            t.ERR_TOO_LARGE.format(name=esc(track.full_name))
-        )
+        name = html.escape(track.full_name) if track.title else "YouTube video"
+        await status.edit_text(t.ERR_TOO_LARGE.format(name=name))
     except Exception:
         log.exception("YouTube audio download failed: %s", video_id)
-        await status.edit_text(t.ERR_GENERIC)
+        await status.edit_text(t.YT_UNAVAILABLE)
+
+
+def _enrich_from_file(track: Track, mp3_path: str) -> Track:
+    """Try to read title/artist from MP3 ID3 tags written by yt-dlp."""
+    try:
+        from mutagen.id3 import ID3
+        tags = ID3(mp3_path)
+        title = str(tags.get("TIT2", "")) or ""
+        artist = str(tags.get("TPE1", "")) or ""
+        if title or artist:
+            from dataclasses import replace
+            return replace(track, title=title or track.title, artists=artist or track.artists)
+    except Exception:
+        pass
+    return track
 
 
 # ─── Playlist ────────────────────────────────────────────────────────────────
