@@ -13,8 +13,5 @@ COPY . .
 
 ENV PYTHONUNBUFFERED=1
 ENV MAX_DOWNLOADS=4
-ENV PORT=8080
-
-EXPOSE 8080
 
 CMD ["python", "-m", "bot.main"]
