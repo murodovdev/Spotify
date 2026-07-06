@@ -30,6 +30,42 @@ class Texts:
     BTN_BACK: str
     BTN_HELP: str
 
+    # --- Post-yuklab olish tugmalari ---
+    BTN_SHARE: str
+    BTN_SIMILAR: str
+    BTN_EFFECTS: str
+    BTN_EDIT_META: str
+
+    # --- Metadata tahrirlash tugmalari ---
+    BTN_META_TITLE: str
+    BTN_META_ARTIST: str
+    BTN_META_ALBUM: str
+    BTN_META_YEAR: str
+    BTN_META_GENRE: str
+    BTN_META_COVER: str
+    BTN_META_CANCEL: str
+
+    # --- Audio effektlar ---
+    EFFECTS_PROCESSING: str
+    EFFECTS_DONE: str
+    EFFECTS_ERROR: str
+
+    # --- O'xshash qo'shiqlar ---
+    SIMILAR_SEARCHING: str
+    SIMILAR_TITLE: str
+    SIMILAR_EMPTY: str
+
+    # --- Metadata muharriri ---
+    META_ASK_TITLE: str
+    META_ASK_ARTIST: str
+    META_ASK_ALBUM: str
+    META_ASK_YEAR: str
+    META_ASK_GENRE: str
+    META_ASK_COVER: str
+    META_PROCESSING: str
+    META_DONE: str
+    META_ERROR: str
+
     # --- Playlist brauzeri ---
     BTN_PL_SHUFFLE: str
     BTN_PL_SEARCH: str
@@ -126,6 +162,40 @@ UZ = Texts(
         "⚙️ /settings — sifat va til sozlamalari"
     ),
     CHOOSE_LANG="🌐 <b>Tilni tanlang:</b>",
+
+    BTN_SHARE="📤 Ulashish",
+    BTN_SIMILAR="🎧 O'xshash",
+    BTN_EFFECTS="🎚 Effektlar",
+    BTN_EDIT_META="🖊 Ma'lumot",
+
+    BTN_META_TITLE="🎵 Sarlavha",
+    BTN_META_ARTIST="👤 Ijrochi",
+    BTN_META_ALBUM="💿 Albom",
+    BTN_META_YEAR="📅 Yil",
+    BTN_META_GENRE="🎼 Janr",
+    BTN_META_COVER="🖼 Muqova",
+    BTN_META_CANCEL="✕ Bekor qilish",
+
+    EFFECTS_PROCESSING="⚙️ <i>{effect} qayta ishlanmoqda…</i>",
+    EFFECTS_DONE="✅ {effect} effekti qo'llanildi!",
+    EFFECTS_ERROR="❌ Effektni qo'llab bo'lmadi.",
+
+    SIMILAR_SEARCHING="🎧 O'xshash qo'shiqlar qidirilmoqda…",
+    SIMILAR_TITLE=(
+        "🎧 <b>«{artist}»</b> ga o'xshash\n"
+        "<i>Sahifa {page} / {pages}</i>"
+    ),
+    SIMILAR_EMPTY="😔 O'xshash qo'shiqlar topilmadi.",
+
+    META_ASK_TITLE="🎵 Yangi <b>sarlavha</b> yozing:",
+    META_ASK_ARTIST="👤 Yangi <b>ijrochi</b> nomini yozing:",
+    META_ASK_ALBUM="💿 Yangi <b>albom</b> nomini yozing:",
+    META_ASK_YEAR="📅 Yangi <b>yil</b> kiriting (masalan: 2024):",
+    META_ASK_GENRE="🎼 Yangi <b>janr</b> yozing:",
+    META_ASK_COVER="🖼 Yangi muqova sifatida <b>rasm</b> yuboring:",
+    META_PROCESSING="⚙️ <i>Fayl yangilanmoqda…</i>",
+    META_DONE="✅ Metadata yangilandi!",
+    META_ERROR="❌ Metadata yangilab bo'lmadi.",
 
     BTN_CONNECT="🔗 Spotify ulash",
     BTN_DISCONNECT="🔌 Hisobni uzish",
@@ -325,6 +395,40 @@ EN = Texts(
     ),
     CHOOSE_LANG="🌐 <b>Choose language:</b>",
 
+    BTN_SHARE="📤 Share",
+    BTN_SIMILAR="🎧 Similar",
+    BTN_EFFECTS="🎚 Effects",
+    BTN_EDIT_META="🖊 Edit Info",
+
+    BTN_META_TITLE="🎵 Title",
+    BTN_META_ARTIST="👤 Artist",
+    BTN_META_ALBUM="💿 Album",
+    BTN_META_YEAR="📅 Year",
+    BTN_META_GENRE="🎼 Genre",
+    BTN_META_COVER="🖼 Cover",
+    BTN_META_CANCEL="✕ Cancel",
+
+    EFFECTS_PROCESSING="⚙️ <i>Applying {effect}…</i>",
+    EFFECTS_DONE="✅ {effect} applied!",
+    EFFECTS_ERROR="❌ Could not apply effect.",
+
+    SIMILAR_SEARCHING="🎧 Finding similar tracks…",
+    SIMILAR_TITLE=(
+        "🎧 <b>Similar to «{artist}»</b>\n"
+        "<i>Page {page} of {pages}</i>"
+    ),
+    SIMILAR_EMPTY="😔 No similar tracks found.",
+
+    META_ASK_TITLE="🎵 Enter new <b>title</b>:",
+    META_ASK_ARTIST="👤 Enter new <b>artist</b> name:",
+    META_ASK_ALBUM="💿 Enter new <b>album</b> name:",
+    META_ASK_YEAR="📅 Enter <b>year</b> (e.g. 2024):",
+    META_ASK_GENRE="🎼 Enter <b>genre</b>:",
+    META_ASK_COVER="🖼 Send a <b>photo</b> to use as cover art:",
+    META_PROCESSING="⚙️ <i>Updating file…</i>",
+    META_DONE="✅ Metadata updated!",
+    META_ERROR="❌ Could not update metadata.",
+
     BTN_CONNECT="🔗 Connect Spotify",
     BTN_DISCONNECT="🔌 Disconnect account",
     BTN_LIKED="❤️ Liked Songs",
@@ -522,6 +626,40 @@ RU = Texts(
         "⚙️ /settings — качество и язык"
     ),
     CHOOSE_LANG="🌐 <b>Выберите язык:</b>",
+
+    BTN_SHARE="📤 Поделиться",
+    BTN_SIMILAR="🎧 Похожие",
+    BTN_EFFECTS="🎚 Эффекты",
+    BTN_EDIT_META="🖊 Инфо",
+
+    BTN_META_TITLE="🎵 Название",
+    BTN_META_ARTIST="👤 Исполнитель",
+    BTN_META_ALBUM="💿 Альбом",
+    BTN_META_YEAR="📅 Год",
+    BTN_META_GENRE="🎼 Жанр",
+    BTN_META_COVER="🖼 Обложка",
+    BTN_META_CANCEL="✕ Отмена",
+
+    EFFECTS_PROCESSING="⚙️ <i>Применяю {effect}…</i>",
+    EFFECTS_DONE="✅ {effect} применён!",
+    EFFECTS_ERROR="❌ Не удалось применить эффект.",
+
+    SIMILAR_SEARCHING="🎧 Ищу похожие треки…",
+    SIMILAR_TITLE=(
+        "🎧 <b>Похожее на «{artist}»</b>\n"
+        "<i>Страница {page} из {pages}</i>"
+    ),
+    SIMILAR_EMPTY="😔 Похожих треков не найдено.",
+
+    META_ASK_TITLE="🎵 Введите новое <b>название</b>:",
+    META_ASK_ARTIST="👤 Введите нового <b>исполнителя</b>:",
+    META_ASK_ALBUM="💿 Введите новый <b>альбом</b>:",
+    META_ASK_YEAR="📅 Введите <b>год</b> (например: 2024):",
+    META_ASK_GENRE="🎼 Введите <b>жанр</b>:",
+    META_ASK_COVER="🖼 Отправьте <b>фото</b> для обложки:",
+    META_PROCESSING="⚙️ <i>Обновляю файл…</i>",
+    META_DONE="✅ Метаданные обновлены!",
+    META_ERROR="❌ Не удалось обновить метаданные.",
 
     BTN_CONNECT="🔗 Подключить Spotify",
     BTN_DISCONNECT="🔌 Отключить аккаунт",

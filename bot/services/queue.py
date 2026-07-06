@@ -58,24 +58,36 @@ async def _retrying(fn):
 
 
 async def _send_cached(
-    bot: Bot, chat_id: int, user_id: int, file_id: str, track: Track, t: Texts
+    bot: Bot, chat_id: int, user_id: int, file_id: str, track: Track, t: Texts,
+    *, full_kb: bool = False,
 ) -> Message:
     is_fav = await repo.is_favorite(user_id, track.id)
+    markup = (
+        keyboards.post_download_kb(track, t, is_fav)
+        if full_kb
+        else keyboards.track_buttons(track, t, is_fav)
+    )
     return await _retrying(
         lambda: bot.send_audio(
             chat_id=chat_id,
             audio=file_id,
             caption=track_caption(track),
-            reply_markup=keyboards.track_buttons(track, t, is_fav),
+            reply_markup=markup,
         )
     )
 
 
 async def _send_file(
-    bot: Bot, chat_id: int, user_id: int, res: Downloaded, track: Track, t: Texts
+    bot: Bot, chat_id: int, user_id: int, res: Downloaded, track: Track, t: Texts,
+    *, full_kb: bool = False,
 ) -> Message:
     thumb = FSInputFile(res.thumb_path) if res.thumb_path else None
     is_fav = await repo.is_favorite(user_id, track.id)
+    markup = (
+        keyboards.post_download_kb(track, t, is_fav)
+        if full_kb
+        else keyboards.track_buttons(track, t, is_fav)
+    )
     return await _retrying(
         lambda: bot.send_audio(
             chat_id=chat_id,
@@ -85,7 +97,7 @@ async def _send_file(
             duration=track.duration or None,
             thumbnail=thumb,
             caption=track_caption(track),
-            reply_markup=keyboards.track_buttons(track, t, is_fav),
+            reply_markup=markup,
         )
     )
 
@@ -131,13 +143,13 @@ async def process_single(bot: Bot, chat_id: int, user_id: int, track_id: str, t:
 
         file_id = await repo.cache_get(track.id, bitrate)
         if file_id:
-            await _send_cached(bot, chat_id, user_id, file_id, track, t)
+            await _send_cached(bot, chat_id, user_id, file_id, track, t, full_kb=True)
             await repo.incr("cache_hits")
         else:
             await _safe_edit(status, t.DOWNLOADING)
             with tempfile.TemporaryDirectory(prefix="spdl_") as tmp:
                 res = await downloader.download(track, bitrate, tmp)
-                msg = await _send_file(bot, chat_id, user_id, res, track, t)
+                msg = await _send_file(bot, chat_id, user_id, res, track, t, full_kb=True)
                 if msg.audio:
                     await repo.cache_put(
                         track.id, bitrate, msg.audio.file_id, track.title, track.artists
