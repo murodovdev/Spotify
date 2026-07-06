@@ -190,7 +190,7 @@ async def cb_similar(cq: CallbackQuery, t: Texts) -> None:
     await cq.answer(t.SIMILAR_SEARCHING)
 
     try:
-        tracks = await recommender.get_similar(track)
+        tracks = await recommender.get_similar(track, user_id=cq.from_user.id)
     except Exception:
         log.exception("Similar search error for track %s", track_id)
         await cq.message.answer(t.SIMILAR_EMPTY)
