@@ -43,23 +43,13 @@ def main_menu(connected: bool, t: Texts) -> InlineKeyboardMarkup:
 
 def track_buttons(track, t: Texts, is_fav: bool = False) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    # Spotify ochish + Sevimlilar
-    if track.id.startswith("yt:"):
-        kb.row(
-            InlineKeyboardButton(text="▶️ YouTube Music", url=track.url),
-            InlineKeyboardButton(
-                text=t.BTN_FAV_SAVED if is_fav else t.BTN_FAV_ADD,
-                callback_data=f"fav:{track.id}",
-            ),
-        )
-    else:
-        kb.row(
-            InlineKeyboardButton(text=t.BTN_OPEN, url=track.url),
-            InlineKeyboardButton(
-                text=t.BTN_FAV_SAVED if is_fav else t.BTN_FAV_ADD,
-                callback_data=f"fav:{track.id}",
-            ),
-        )
+    # Sevimlilar
+    kb.row(
+        InlineKeyboardButton(
+            text=t.BTN_FAV_SAVED if is_fav else t.BTN_FAV_ADD,
+            callback_data=f"fav:{track.id}",
+        ),
+    )
     # Albom + Ijrochi (mavjud bo'lsa)
     extras = []
     if track.album_id:
@@ -188,15 +178,9 @@ def post_download_kb(track, t: Texts, is_fav: bool = False) -> InlineKeyboardMar
         InlineKeyboardButton(text=t.BTN_EDIT_META, callback_data=f"em:{track.id}"),
     )
 
-    # Row 3: Open link + Album (if available)
-    row3: list[InlineKeyboardButton] = []
-    if track.id.startswith("yt:"):
-        row3.append(InlineKeyboardButton(text="▶️ YouTube", url=track.url))
-    else:
-        row3.append(InlineKeyboardButton(text=t.BTN_OPEN, url=track.url))
+    # Row 3: Album (if available)
     if track.album_id:
-        row3.append(InlineKeyboardButton(text=t.BTN_ALBUM, callback_data=f"dl:a:{track.album_id}"))
-    kb.row(*row3)
+        kb.row(InlineKeyboardButton(text=t.BTN_ALBUM, callback_data=f"dl:a:{track.album_id}"))
 
     # Row 4: Artist (if available)
     if track.artist_id:
@@ -247,7 +231,7 @@ def metadata_editor_kb(track_id: str, t: Texts) -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
-def recognize_result_kb(track, t: Texts, shazam_url: str = "") -> InlineKeyboardMarkup:
+def recognize_result_kb(track, t: Texts) -> InlineKeyboardMarkup:
     """Keyboard shown after successful music recognition."""
     kb = InlineKeyboardBuilder()
     # Row 1: Download + Save to Favorites
@@ -264,9 +248,6 @@ def recognize_result_kb(track, t: Texts, shazam_url: str = "") -> InlineKeyboard
             switch_inline_query=share_query,
         ),
     )
-    # Row 3: View on Shazam (optional)
-    if shazam_url:
-        kb.row(InlineKeyboardButton(text=t.BTN_VIEW_SHAZAM, url=shazam_url))
     return kb.as_markup()
 
 
