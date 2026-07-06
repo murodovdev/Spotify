@@ -18,10 +18,17 @@ router = Router(name="favorites")
 
 @router.callback_query(F.data.startswith("fav:"))
 async def cb_fav_toggle(cq: CallbackQuery, t: Texts) -> None:
+    from bot import store as _store
     track_id = cq.data[4:]
     row = await repo.cache_any_row(track_id)
     title = (row["title"] if row else "") or ""
     artist = (row["artist"] if row else "") or ""
+    # For recognition results (in store but not yet in DB cache), fall back to store.
+    if not title or not artist:
+        mem = _store.get(track_id)
+        if mem:
+            title = mem.title or title
+            artist = mem.artists or artist
     saved = await repo.toggle_favorite(cq.from_user.id, track_id, title, artist)
     await cq.answer(t.FAV_ADDED if saved else t.FAV_REMOVED)
 

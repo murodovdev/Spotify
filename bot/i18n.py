@@ -125,6 +125,14 @@ class Texts:
     ERR_PREMIUM: str
     ERR_EXPIRED: str
 
+    # --- Musiqa tanishtirish (recognition) ---
+    RECOGNIZING: str
+    RECOGNIZE_HEADER: str
+    RECOGNIZE_NOT_FOUND: str
+    RECOGNIZE_TOO_LARGE: str
+    BTN_RECOGNIZE_DL: str
+    BTN_VIEW_SHAZAM: str
+
     # --- Admin ---
     STATS: str
 
@@ -155,6 +163,8 @@ UZ = Texts(
         "Trek, albom, playlist yoki ijrochi havolasini yuboring.\n\n"
         "🔍 <b>Qidiruv orqali</b>\n"
         "Qo'shiq nomini yozing — natijalardan tanlang.\n\n"
+        "🎵 <b>Musiqa tanishtirish</b>\n"
+        "Audio, ovozli xabar, video yoki dumaloq video yuboring — bot qo'shiqni avtomatik aniqlab beradi.\n\n"
         "❤️ <b>Liked Songs</b>\n"
         "Spotify hisobingizni ulab, sevimlilaringizni yuklab oling.\n\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
@@ -196,6 +206,20 @@ UZ = Texts(
     META_PROCESSING="⚙️ <i>Fayl yangilanmoqda…</i>",
     META_DONE="✅ Metadata yangilandi!",
     META_ERROR="❌ Metadata yangilab bo'lmadi.",
+
+    RECOGNIZING="🎵 <i>Musiqa tahlil qilinmoqda…</i>",
+    RECOGNIZE_HEADER="✅ <b>Qo'shiq aniqlandi!</b>\n━━━━━━━━━━━━━━━━━━━━",
+    RECOGNIZE_NOT_FOUND=(
+        "😔 <b>Qo'shiq topilmadi</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "Aniqroq yozilgan yoki shovqinroq bo'lmagan audio yuboring."
+    ),
+    RECOGNIZE_TOO_LARGE=(
+        "⚠️ <b>Fayl juda katta</b>\n"
+        "Telegram 20 MB dan katta faylni yuklab ololmaydi."
+    ),
+    BTN_RECOGNIZE_DL="⬇️ Yuklab olish",
+    BTN_VIEW_SHAZAM="🎵 Shazam'da ko'rish",
 
     BTN_CONNECT="🔗 Spotify ulash",
     BTN_DISCONNECT="🔌 Hisobni uzish",
@@ -387,6 +411,8 @@ EN = Texts(
         "Send a Spotify track, album, playlist, or artist link.\n\n"
         "🔍 <b>Via search</b>\n"
         "Type a song name and pick from the results.\n\n"
+        "🎵 <b>Music Recognition</b>\n"
+        "Send any audio, voice message, video or round video — the bot will identify the song automatically.\n\n"
         "❤️ <b>Liked Songs</b>\n"
         "Connect your Spotify account to download your favorites.\n\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
@@ -428,6 +454,20 @@ EN = Texts(
     META_PROCESSING="⚙️ <i>Updating file…</i>",
     META_DONE="✅ Metadata updated!",
     META_ERROR="❌ Could not update metadata.",
+
+    RECOGNIZING="🎵 <i>Analysing music…</i>",
+    RECOGNIZE_HEADER="✅ <b>Song Identified!</b>\n━━━━━━━━━━━━━━━━━━━━",
+    RECOGNIZE_NOT_FOUND=(
+        "😔 <b>Song not found</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "Try sending a cleaner or less noisy recording."
+    ),
+    RECOGNIZE_TOO_LARGE=(
+        "⚠️ <b>File too large</b>\n"
+        "Telegram can't download files over 20 MB."
+    ),
+    BTN_RECOGNIZE_DL="⬇️ Download",
+    BTN_VIEW_SHAZAM="🎵 View on Shazam",
 
     BTN_CONNECT="🔗 Connect Spotify",
     BTN_DISCONNECT="🔌 Disconnect account",
@@ -619,6 +659,8 @@ RU = Texts(
         "Отправьте ссылку на трек, альбом, плейлист или исполнителя.\n\n"
         "🔍 <b>По поиску</b>\n"
         "Напишите название песни — выберите из результатов.\n\n"
+        "🎵 <b>Распознавание музыки</b>\n"
+        "Отправьте аудио, голосовое сообщение, видео или кружок — бот автоматически определит песню.\n\n"
         "❤️ <b>Liked Songs</b>\n"
         "Подключите аккаунт Spotify и скачивайте избранное.\n\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
@@ -660,6 +702,20 @@ RU = Texts(
     META_PROCESSING="⚙️ <i>Обновляю файл…</i>",
     META_DONE="✅ Метаданные обновлены!",
     META_ERROR="❌ Не удалось обновить метаданные.",
+
+    RECOGNIZING="🎵 <i>Анализирую музыку…</i>",
+    RECOGNIZE_HEADER="✅ <b>Песня определена!</b>\n━━━━━━━━━━━━━━━━━━━━",
+    RECOGNIZE_NOT_FOUND=(
+        "😔 <b>Песня не найдена</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "Попробуйте отправить более чистую запись без шумов."
+    ),
+    RECOGNIZE_TOO_LARGE=(
+        "⚠️ <b>Файл слишком большой</b>\n"
+        "Telegram не может скачать файлы больше 20 МБ."
+    ),
+    BTN_RECOGNIZE_DL="⬇️ Скачать",
+    BTN_VIEW_SHAZAM="🎵 Открыть в Shazam",
 
     BTN_CONNECT="🔗 Подключить Spotify",
     BTN_DISCONNECT="🔌 Отключить аккаунт",
