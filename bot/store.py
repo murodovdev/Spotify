@@ -25,6 +25,7 @@ searches: _Store = _Store()
 pending_collections: _Store = _Store()
 playlists: _Store = _Store()
 pending_videos: _Store = _Store()  # token → original video URL
+share_tokens: _Store = _Store()    # clean_query → track_id for inline share
 
 # Playlist ichida qidiruv rejimi: user_id → playlist token. Foydalanuvchi 🔎 bossa
 # shu yerga yoziladi va keyingi matnli xabar playlist bo'yicha filtrlanadi.
@@ -45,6 +46,18 @@ def stash_playlist(playlist: Playlist) -> str:
 
 def stash_video(url: str) -> str:
     return pending_videos.put(url)
+
+
+def stash_share(track) -> str:
+    query = f"{track.artists} — {track.title}".strip(" —") or "🎵"
+    share_tokens[query] = track.id
+    while len(share_tokens) > _MAX:
+        share_tokens.popitem(last=False)
+    return query
+
+
+def resolve_share(query: str) -> str | None:
+    return share_tokens.get(query)
 
 
 # Qidiruv natijalari — id bo'yicha (yt:, it:, dz: sintetik id'lar). Tanlanganda
