@@ -15,42 +15,58 @@ def lang_picker(prefix: str = "lang") -> InlineKeyboardMarkup:
 def main_menu(connected: bool, t: Texts) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     if connected:
-        kb.button(text=t.BTN_LIKED, callback_data="menu:liked")
-        kb.button(text=t.BTN_DISCONNECT, callback_data="menu:disconnect")
+        # Liked Songs — to'liq kenglikda
+        kb.row(InlineKeyboardButton(text=t.BTN_LIKED, callback_data="menu:liked"))
+        # Sevimlilar + Sozlamalar — 2 ustun
+        kb.row(
+            InlineKeyboardButton(text=t.BTN_FAVORITES, callback_data="menu:favorites"),
+            InlineKeyboardButton(text=t.BTN_SETTINGS, callback_data="menu:settings"),
+        )
+        # Uzish + Qo'llanma — 2 ustun
+        kb.row(
+            InlineKeyboardButton(text=t.BTN_DISCONNECT, callback_data="menu:disconnect"),
+            InlineKeyboardButton(text=t.BTN_HELP, callback_data="menu:help"),
+        )
     else:
-        kb.button(text=t.BTN_CONNECT, callback_data="menu:connect")
-    kb.button(text=t.BTN_FAVORITES, callback_data="menu:favorites")
-    kb.button(text=t.BTN_SETTINGS, callback_data="menu:settings")
-    kb.adjust(2)
+        # Ulash — to'liq kenglikda
+        kb.row(InlineKeyboardButton(text=t.BTN_CONNECT, callback_data="menu:connect"))
+        # Sevimlilar + Sozlamalar — 2 ustun
+        kb.row(
+            InlineKeyboardButton(text=t.BTN_FAVORITES, callback_data="menu:favorites"),
+            InlineKeyboardButton(text=t.BTN_SETTINGS, callback_data="menu:settings"),
+        )
+        # Qo'llanma — to'liq kenglikda
+        kb.row(InlineKeyboardButton(text=t.BTN_HELP, callback_data="menu:help"))
     return kb.as_markup()
 
 
 def track_buttons(track, t: Texts, is_fav: bool = False) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    row1 = 0
-    # 1-qator: havolada ochish + sevimlilarga saqlash
+    # Spotify ochish + Sevimlilar
     if track.id.startswith("yt:"):
-        kb.button(text="▶️ YouTube Music", url=track.url)
+        kb.row(
+            InlineKeyboardButton(text="▶️ YouTube Music", url=track.url),
+            InlineKeyboardButton(
+                text=t.BTN_FAV_SAVED if is_fav else t.BTN_FAV_ADD,
+                callback_data=f"fav:{track.id}",
+            ),
+        )
     else:
-        kb.button(text=t.BTN_OPEN, url=track.url)
-    row1 += 1
-    kb.button(
-        text=t.BTN_FAV_SAVED if is_fav else t.BTN_FAV_ADD,
-        callback_data=f"fav:{track.id}",
-    )
-    row1 += 1
-    # 2-qator: albom / ijrochi (mavjud bo'lsa)
-    row2 = 0
+        kb.row(
+            InlineKeyboardButton(text=t.BTN_OPEN, url=track.url),
+            InlineKeyboardButton(
+                text=t.BTN_FAV_SAVED if is_fav else t.BTN_FAV_ADD,
+                callback_data=f"fav:{track.id}",
+            ),
+        )
+    # Albom + Ijrochi (mavjud bo'lsa)
+    extras = []
     if track.album_id:
-        kb.button(text=t.BTN_ALBUM, callback_data=f"dl:a:{track.album_id}")
-        row2 += 1
+        extras.append(InlineKeyboardButton(text=t.BTN_ALBUM, callback_data=f"dl:a:{track.album_id}"))
     if track.artist_id:
-        kb.button(text=t.BTN_ARTIST, callback_data=f"dl:ar:{track.artist_id}")
-        row2 += 1
-    if row2:
-        kb.adjust(row1, row2)
-    else:
-        kb.adjust(row1)
+        extras.append(InlineKeyboardButton(text=t.BTN_ARTIST, callback_data=f"dl:ar:{track.artist_id}"))
+    if extras:
+        kb.row(*extras)
     return kb.as_markup()
 
 
@@ -61,8 +77,8 @@ def favorites_list(rows, t: Texts) -> InlineKeyboardMarkup:
         artist = r["artist"] or ""
         label = f"{artist} — {title}" if artist else title
         label = label.strip(" —") or "🎵"
-        if len(label) > 60:
-            label = label[:59] + "…"
+        if len(label) > 55:
+            label = label[:54] + "…"
         kb.button(text=f"🎵 {label}", callback_data=f"dl:t:{r['spotify_id']}")
     kb.adjust(1)
     return kb.as_markup()
@@ -81,8 +97,11 @@ def search_results(tracks, token: str, page: int, t: Texts, per_page: int = 6) -
     start = page * per_page
     for tr in tracks[start : start + per_page]:
         mins, secs = divmod(tr.duration, 60)
+        label = f"{tr.artists} — {tr.title}".strip(" —") or "🎵"
+        if len(label) > 48:
+            label = label[:47] + "…"
         kb.button(
-            text=f"{tr.artists} — {tr.title}  {mins}:{secs:02d}",
+            text=f"🎵 {label}  ·  {mins}:{secs:02d}",
             callback_data=f"dl:t:{tr.id}",
         )
     kb.adjust(1)
@@ -91,18 +110,53 @@ def search_results(tracks, token: str, page: int, t: Texts, per_page: int = 6) -
     if pages > 1:
         nav = []
         if page > 0:
-            nav.append(
-                InlineKeyboardButton(text=t.BTN_PREV, callback_data=f"sr:{token}:{page - 1}")
-            )
-        nav.append(
-            InlineKeyboardButton(text=f"{page + 1}/{pages}", callback_data="noop")
-        )
+            nav.append(InlineKeyboardButton(text=t.BTN_PREV, callback_data=f"sr:{token}:{page - 1}"))
+        nav.append(InlineKeyboardButton(text=f"{page + 1}/{pages}", callback_data="noop"))
         if page < pages - 1:
-            nav.append(
-                InlineKeyboardButton(text=t.BTN_NEXT, callback_data=f"sr:{token}:{page + 1}")
-            )
+            nav.append(InlineKeyboardButton(text=t.BTN_NEXT, callback_data=f"sr:{token}:{page + 1}"))
         kb.row(*nav)
     return kb.as_markup()
+
+
+def confirm_collection(token: str, t: Texts) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text=t.BTN_START_DL, callback_data=f"go:{token}"),
+                InlineKeyboardButton(text=t.BTN_CANCEL, callback_data=f"no:{token}"),
+            ]
+        ]
+    )
+
+
+def cancel_button(user_id: int, t: Texts) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text=t.BTN_CANCEL, callback_data=f"stop:{user_id}")]
+        ]
+    )
+
+
+def settings_kb(quality: str, lang: str, t: Texts) -> InlineKeyboardMarkup:
+    def qlabel(q: str) -> str:
+        icon = "✅" if q == quality else "◻️"
+        label = "🔉 128 kbps" if q == "128" else "🔊 320 kbps"
+        return f"{icon} {label}"
+
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text=qlabel("128"), callback_data="q:128"),
+                InlineKeyboardButton(text=qlabel("320"), callback_data="q:320"),
+            ],
+            [
+                InlineKeyboardButton(text=t.BTN_LANG, callback_data="menu:lang"),
+            ],
+            [
+                InlineKeyboardButton(text=t.BTN_BACK, callback_data="menu:home"),
+            ],
+        ]
+    )
 
 
 def playlist_browser(
@@ -114,11 +168,7 @@ def playlist_browser(
     sort_pop: bool = False,
     has_pop: bool = False,
 ) -> InlineKeyboardMarkup:
-    """Interaktiv playlist: sahifalangan qo'shiq tugmalari + boshqaruv.
-
-    Har bir qo'shiq tugmasi mavjud `dl:t:` callback'ini ishlatadi — bosilganda
-    faqat o'sha trek yuklanadi, playlist menyusi joyida qoladi.
-    """
+    """Interaktiv playlist: sahifalangan qo'shiq tugmalari + boshqaruv."""
     kb = InlineKeyboardBuilder()
     pages = max(1, (len(tracks) + per_page - 1) // per_page)
     page = max(0, min(page, pages - 1))
@@ -159,52 +209,10 @@ def playlist_browser(
         InlineKeyboardButton(text=t.BTN_PL_SEARCH, callback_data=f"pl:s:{token}"),
     ]
     if has_pop:
-        # Ommaboplik bo'yicha saralashni almashtirish → 0-sahifaga qaytadi.
-        label = f"{t.BTN_PL_POPULAR} ✓" if sort_pop else t.BTN_PL_POPULAR
+        pop_label = f"{t.BTN_PL_POPULAR} ✓" if sort_pop else t.BTN_PL_POPULAR
         controls.append(
-            InlineKeyboardButton(text=label, callback_data=f"pl:p:{token}:0:{1 - s}")
+            InlineKeyboardButton(text=pop_label, callback_data=f"pl:p:{token}:0:{1 - s}")
         )
     kb.row(*controls)
     kb.row(InlineKeyboardButton(text=t.BTN_PL_CLOSE, callback_data="pl:x"))
     return kb.as_markup()
-
-
-def confirm_collection(token: str, t: Texts) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(text=t.BTN_START_DL, callback_data=f"go:{token}"),
-                InlineKeyboardButton(text=t.BTN_CANCEL, callback_data=f"no:{token}"),
-            ]
-        ]
-    )
-
-
-def cancel_button(user_id: int, t: Texts) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text=t.BTN_CANCEL, callback_data=f"stop:{user_id}")]
-        ]
-    )
-
-
-def settings_kb(quality: str, lang: str, t: Texts) -> InlineKeyboardMarkup:
-    def qlabel(q: str) -> str:
-        icon = "✅" if q == quality else "🔘"
-        label = "🔉 128 kbps" if q == "128" else "🔊 320 kbps"
-        return f"{icon} {label}"
-
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(text=qlabel("128"), callback_data="q:128"),
-                InlineKeyboardButton(text=qlabel("320"), callback_data="q:320"),
-            ],
-            [
-                InlineKeyboardButton(
-                    text=f"{t.BTN_LANG} · {LANG_LABELS.get(lang, LANG_LABELS['uz'])}",
-                    callback_data="menu:lang",
-                ),
-            ],
-        ]
-    )

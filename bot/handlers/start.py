@@ -8,6 +8,7 @@ from bot import keyboards
 from bot.db import repo
 from bot.i18n import LANG_LABELS, WELCOME_BANNER, Texts, get_texts
 
+
 router = Router(name="start")
 
 
@@ -49,6 +50,24 @@ async def cb_lang(cq: CallbackQuery) -> None:
 @router.message(Command("help"))
 async def cmd_help(message: Message, t: Texts) -> None:
     await message.answer(t.HELP)
+
+
+@router.callback_query(F.data == "menu:home")
+async def cb_home(cq: CallbackQuery, t: Texts) -> None:
+    """Sozlamalar yoki boshqa ekrandan asosiy menyuga qaytish."""
+    await cq.answer()
+    connected = await repo.is_connected(cq.from_user.id)
+    text = _welcome(t, cq.from_user.first_name)
+    try:
+        await cq.message.edit_text(text, reply_markup=keyboards.main_menu(connected, t))
+    except Exception:
+        await cq.message.answer(text, reply_markup=keyboards.main_menu(connected, t))
+
+
+@router.callback_query(F.data == "menu:help")
+async def cb_help(cq: CallbackQuery, t: Texts) -> None:
+    await cq.answer()
+    await cq.message.answer(t.HELP)
 
 
 @router.callback_query(F.data == "noop")

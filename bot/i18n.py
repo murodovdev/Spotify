@@ -27,6 +27,8 @@ class Texts:
     BTN_FAV_ADD: str
     BTN_FAV_SAVED: str
     BTN_FAVORITES: str
+    BTN_BACK: str
+    BTN_HELP: str
 
     # --- Playlist brauzeri ---
     BTN_PL_SHUFFLE: str
@@ -101,45 +103,47 @@ class Texts:
 
 UZ = Texts(
     WELCOME=(
-        "🎵 <b>TrackFlow</b> — Spotify yuklovchi\n\n"
-        "Salom, {name}! 👋\n"
-        "Men Spotify'dagi istalgan <b>qo'shiq</b>, <b>albom</b> yoki <b>playlist</b>ni "
-        "yuqori sifatli MP3 qilib yuboraman.\n\n"
-        "<b>Boshlash juda oson:</b>\n"
-        "🔗 Spotify havolasini tashlang\n"
-        "🔍 yoki shunchaki qo'shiq nomini yozing\n\n"
-        "<i>Sinab ko'ring</i> 👉 <code>The Weeknd Blinding Lights</code>"
+        "🎵 <b>TrackFlow</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━\n\n"
+        "Salom, <b>{name}</b>! 👋\n\n"
+        "Spotify'dagi istalgan <b>qo'shiq</b>, <b>albom</b> yoki "
+        "<b>playlist</b>ni MP3 formatida yuklab bering.\n\n"
+        "🔗 Spotify havolasini yuboring\n"
+        "🔍 yoki qo'shiq nomini yozing\n\n"
+        "<i>Masalan:</i> <code>The Weeknd Blinding Lights</code>"
     ),
     HELP=(
         "📖 <b>Qo'llanma</b>\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
         "🔗 <b>Havola orqali</b>\n"
-        "Spotify'dan trek, albom, playlist yoki ijrochi havolasini yuboring.\n\n"
+        "Trek, albom, playlist yoki ijrochi havolasini yuboring.\n\n"
         "🔍 <b>Qidiruv orqali</b>\n"
-        "Qo'shiq nomini yozing va natijalardan tanlang.\n\n"
+        "Qo'shiq nomini yozing — natijalardan tanlang.\n\n"
         "❤️ <b>Liked Songs</b>\n"
-        "/liked — sevimlilaringizni yuklab oling <i>(Spotify Premium kerak)</i>.\n\n"
+        "Spotify hisobingizni ulab, sevimlilaringizni yuklab oling.\n\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
-        "⭐ /favorites — saqlangan qo'shiqlaringiz\n"
-        "⚙️ /settings — audio sifati va til"
+        "⭐ /favorites — saqlangan qo'shiqlar\n"
+        "⚙️ /settings — sifat va til sozlamalari"
     ),
     CHOOSE_LANG="🌐 <b>Tilni tanlang:</b>",
 
     BTN_CONNECT="🔗 Spotify ulash",
-    BTN_DISCONNECT="🔌 Uzish",
+    BTN_DISCONNECT="🔌 Hisobni uzish",
     BTN_LIKED="❤️ Liked Songs",
     BTN_SETTINGS="⚙️ Sozlamalar",
     BTN_ALBUM="💿 Albom",
     BTN_ARTIST="🎤 Ijrochi",
-    BTN_CANCEL="✕ Bekor",
+    BTN_CANCEL="✕ Bekor qilish",
     BTN_START_DL="⬇️ Yuklab olish",
-    BTN_PREV="← Oldingi",
-    BTN_NEXT="Keyingi →",
-    BTN_LANG="🌐 Til",
+    BTN_PREV="⬅️ Oldingi",
+    BTN_NEXT="Keyingi ➡️",
+    BTN_LANG="🌐 Tilni o'zgartirish",
     BTN_OPEN="🔗 Spotify'da ochish",
     BTN_FAV_ADD="🤍 Saqlash",
     BTN_FAV_SAVED="❤️ Saqlangan",
     BTN_FAVORITES="⭐ Sevimlilar",
+    BTN_BACK="← Orqaga",
+    BTN_HELP="📖 Qo'llanma",
 
     BTN_PL_SHUFFLE="🎲 Tasodifiy",
     BTN_PL_SEARCH="🔎 Qidirish",
@@ -197,27 +201,37 @@ UZ = Texts(
 
     SEARCH_RESULTS=(
         "🔍 <b>«{query}»</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
         "<i>Sahifa {page} / {pages}</i>"
     ),
-    SEARCH_EMPTY="😔 <b>«{query}»</b> bo'yicha hech narsa topilmadi.\n<i>Boshqa nom bilan urinib ko'ring.</i>",
+    SEARCH_EMPTY=(
+        "😔 <b>Hech narsa topilmadi</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "<i>«{query}»</i> bo'yicha natija yo'q.\n"
+        "Boshqa nom bilan urinib ko'ring."
+    ),
 
     CONNECT_PROMPT=(
-        "🔗 <b>Spotify'ni ulang</b>\n"
+        "🔗 <b>Spotify hisobini ulang</b>\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
-        "Liked Songs yuklab olish uchun Spotify hisobingizni ulashingiz kerak."
+        "Liked Songs yuklab olish uchun Spotify hisobingizni ulang."
     ),
     BTN_CONNECT_URL="🟢 Spotify'ga kirish",
     CONNECTED_MSG=(
         "✅ <b>Spotify ulandi!</b>\n"
-        "/liked — sevimli qo'shiqlaringizni yuklab oling."
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "Endi /liked orqali sevimli qo'shiqlaringizni yuklab olishingiz mumkin."
     ),
     ALREADY_CONNECTED=(
-        "ℹ️ Spotify allaqachon ulangan.\n"
-        "/liked — yuklab olish."
+        "ℹ️ <b>Spotify allaqachon ulangan</b>\n"
+        "❤️ /liked — yuklab olish."
     ),
-    DISCONNECTED="🔌 Spotify uzildi.",
+    DISCONNECTED=(
+        "🔌 <b>Spotify uzildi</b>\n"
+        "Qayta ulash uchun /start bosing."
+    ),
     NOT_CONNECTED=(
-        "⚠️ Spotify ulanmagan.\n"
+        "⚠️ <b>Spotify ulanmagan</b>\n"
         "Avval /start orqali hisobingizni ulang."
     ),
 
@@ -228,7 +242,10 @@ UZ = Texts(
         "🎵 Qo'shiqlar soni: <b>{count}</b>\n\n"
         "<i>Yuklab olishni boshlashni xohlaysizmi?</i>"
     ),
-    LIKED_EMPTY="😔 Liked Songs bo'sh.",
+    LIKED_EMPTY=(
+        "😔 <b>Liked Songs bo'sh</b>\n"
+        "Spotify'da biror qo'shiqni yoqtiring va qayta urinib ko'ring."
+    ),
 
     SETTINGS=(
         "⚙️ <b>Sozlamalar</b>\n"
@@ -238,23 +255,29 @@ UZ = Texts(
     QUALITY_SET="✅ {quality} kbps o'rnatildi",
     LANG_SET="✅ O'zbek tili tanlandi",
 
-    ERR_NOT_FOUND="😔 <b>«{name}»</b> uchun audio topilmadi.",
-    ERR_TOO_LARGE="⚠️ <b>«{name}»</b> juda katta — Telegram limiti 50 MB.",
+    ERR_NOT_FOUND=(
+        "😔 <b>Audio topilmadi</b>\n"
+        "<i>«{name}»</i> uchun ovoz fayli yo'q."
+    ),
+    ERR_TOO_LARGE=(
+        "⚠️ <b>Fayl juda katta</b>\n"
+        "<i>«{name}»</i> — Telegram limiti 50 MB."
+    ),
     ERR_GENERIC="❌ Xatolik yuz berdi. Qayta urinib ko'ring.",
     ERR_SPOTIFY_LINK=(
-        "❓ Havola tanilmadi.\n"
-        "<i>Trek, albom, playlist yoki ijrochi havolasini yuboring.</i>"
+        "❓ <b>Havola tanilmadi</b>\n"
+        "Trek, albom, playlist yoki ijrochi havolasini yuboring."
     ),
     ERR_BUSY=(
-        "⏳ Yuklash davom etmoqda.\n"
-        "Avval u tugashini kuting yoki bekor qiling."
+        "⏳ <b>Yuklash davom etmoqda</b>\n"
+        "Avval tugashini kuting yoki bekor qiling."
     ),
     ERR_NO_CREDENTIALS="🔧 Spotify API kalitlari sozlanmagan. Admin'ga murojaat qiling.",
     ERR_PREMIUM=(
         "⭐ <b>Spotify Premium kerak</b>\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
         "Liked Songs uchun ilova egasida Premium bo'lishi shart.\n"
-        "<i>Qolgan barcha funksiyalar Premium'siz ishlaydi.</i>"
+        "<i>Boshqa barcha funksiyalar bepul ishlaydi.</i>"
     ),
     ERR_EXPIRED="⏱ Vaqt tugadi. Qaytadan urinib ko'ring.",
 
@@ -278,14 +301,14 @@ UZ = Texts(
 
 EN = Texts(
     WELCOME=(
-        "🎵 <b>TrackFlow</b> — Spotify downloader\n\n"
-        "Hi {name}! 👋\n"
-        "I turn any Spotify <b>song</b>, <b>album</b> or <b>playlist</b> into a "
-        "high-quality MP3.\n\n"
-        "<b>Getting started is easy:</b>\n"
-        "🔗 Drop a Spotify link\n"
-        "🔍 or just type a song name\n\n"
-        "<i>Try it</i> 👉 <code>The Weeknd Blinding Lights</code>"
+        "🎵 <b>TrackFlow</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━\n\n"
+        "Hi, <b>{name}</b>! 👋\n\n"
+        "Download any Spotify <b>song</b>, <b>album</b> or "
+        "<b>playlist</b> as MP3.\n\n"
+        "🔗 Send a Spotify link\n"
+        "🔍 or type a song name\n\n"
+        "<i>Example:</i> <code>The Weeknd Blinding Lights</code>"
     ),
     HELP=(
         "📖 <b>How it works</b>\n"
@@ -295,28 +318,30 @@ EN = Texts(
         "🔍 <b>Via search</b>\n"
         "Type a song name and pick from the results.\n\n"
         "❤️ <b>Liked Songs</b>\n"
-        "/liked — download your favorites <i>(requires Spotify Premium)</i>.\n\n"
+        "Connect your Spotify account to download your favorites.\n\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
         "⭐ /favorites — your saved songs\n"
-        "⚙️ /settings — audio quality & language"
+        "⚙️ /settings — quality & language"
     ),
     CHOOSE_LANG="🌐 <b>Choose language:</b>",
 
     BTN_CONNECT="🔗 Connect Spotify",
-    BTN_DISCONNECT="🔌 Disconnect",
+    BTN_DISCONNECT="🔌 Disconnect account",
     BTN_LIKED="❤️ Liked Songs",
     BTN_SETTINGS="⚙️ Settings",
     BTN_ALBUM="💿 Album",
     BTN_ARTIST="🎤 Artist",
     BTN_CANCEL="✕ Cancel",
     BTN_START_DL="⬇️ Download",
-    BTN_PREV="← Prev",
-    BTN_NEXT="Next →",
-    BTN_LANG="🌐 Language",
+    BTN_PREV="⬅️ Prev",
+    BTN_NEXT="Next ➡️",
+    BTN_LANG="🌐 Change language",
     BTN_OPEN="🔗 Open in Spotify",
     BTN_FAV_ADD="🤍 Save",
     BTN_FAV_SAVED="❤️ Saved",
     BTN_FAVORITES="⭐ Favorites",
+    BTN_BACK="← Back",
+    BTN_HELP="📖 Help",
 
     BTN_PL_SHUFFLE="🎲 Shuffle",
     BTN_PL_SEARCH="🔎 Search",
@@ -374,9 +399,15 @@ EN = Texts(
 
     SEARCH_RESULTS=(
         "🔍 <b>«{query}»</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
         "<i>Page {page} of {pages}</i>"
     ),
-    SEARCH_EMPTY="😔 Nothing found for <b>«{query}»</b>.\n<i>Try a different name.</i>",
+    SEARCH_EMPTY=(
+        "😔 <b>Nothing found</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "No results for <i>«{query}»</i>.\n"
+        "Try a different name."
+    ),
 
     CONNECT_PROMPT=(
         "🔗 <b>Connect Spotify</b>\n"
@@ -386,15 +417,19 @@ EN = Texts(
     BTN_CONNECT_URL="🟢 Sign in to Spotify",
     CONNECTED_MSG=(
         "✅ <b>Spotify connected!</b>\n"
-        "/liked — download your favorite songs."
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "Use /liked to download your favorite songs."
     ),
     ALREADY_CONNECTED=(
-        "ℹ️ Spotify is already connected.\n"
-        "/liked — download."
+        "ℹ️ <b>Spotify already connected</b>\n"
+        "❤️ /liked — download."
     ),
-    DISCONNECTED="🔌 Spotify disconnected.",
+    DISCONNECTED=(
+        "🔌 <b>Spotify disconnected</b>\n"
+        "Use /start to reconnect."
+    ),
     NOT_CONNECTED=(
-        "⚠️ Spotify not connected.\n"
+        "⚠️ <b>Spotify not connected</b>\n"
         "Use /start to connect your account first."
     ),
 
@@ -405,7 +440,10 @@ EN = Texts(
         "🎵 Tracks: <b>{count}</b>\n\n"
         "<i>Ready to start downloading?</i>"
     ),
-    LIKED_EMPTY="😔 Liked Songs is empty.",
+    LIKED_EMPTY=(
+        "😔 <b>Liked Songs is empty</b>\n"
+        "Like some songs on Spotify and try again."
+    ),
 
     SETTINGS=(
         "⚙️ <b>Settings</b>\n"
@@ -415,15 +453,21 @@ EN = Texts(
     QUALITY_SET="✅ {quality} kbps selected",
     LANG_SET="✅ English selected",
 
-    ERR_NOT_FOUND="😔 Audio not found for <b>«{name}»</b>.",
-    ERR_TOO_LARGE="⚠️ <b>«{name}»</b> is too large — Telegram limit is 50 MB.",
+    ERR_NOT_FOUND=(
+        "😔 <b>Audio not found</b>\n"
+        "No audio file for <i>«{name}»</i>."
+    ),
+    ERR_TOO_LARGE=(
+        "⚠️ <b>File too large</b>\n"
+        "<i>«{name}»</i> — Telegram limit is 50 MB."
+    ),
     ERR_GENERIC="❌ Something went wrong. Try again.",
     ERR_SPOTIFY_LINK=(
-        "❓ Unrecognized link.\n"
-        "<i>Send a track, album, playlist, or artist link.</i>"
+        "❓ <b>Unrecognized link</b>\n"
+        "Send a track, album, playlist, or artist link."
     ),
     ERR_BUSY=(
-        "⏳ Download in progress.\n"
+        "⏳ <b>Download in progress</b>\n"
         "Wait for it to finish or cancel it."
     ),
     ERR_NO_CREDENTIALS="🔧 Spotify API keys are not configured. Contact the admin.",
@@ -455,45 +499,47 @@ EN = Texts(
 
 RU = Texts(
     WELCOME=(
-        "🎵 <b>TrackFlow</b> — загрузчик Spotify\n\n"
-        "Привет, {name}! 👋\n"
-        "Превращаю любой <b>трек</b>, <b>альбом</b> или <b>плейлист</b> из Spotify "
-        "в MP3 высокого качества.\n\n"
-        "<b>Начать очень просто:</b>\n"
+        "🎵 <b>TrackFlow</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━\n\n"
+        "Привет, <b>{name}</b>! 👋\n\n"
+        "Скачивайте любой <b>трек</b>, <b>альбом</b> или "
+        "<b>плейлист</b> из Spotify в MP3.\n\n"
         "🔗 Пришлите ссылку Spotify\n"
-        "🔍 или просто напишите название песни\n\n"
-        "<i>Попробуйте</i> 👉 <code>The Weeknd Blinding Lights</code>"
+        "🔍 или напишите название песни\n\n"
+        "<i>Например:</i> <code>The Weeknd Blinding Lights</code>"
     ),
     HELP=(
         "📖 <b>Как работает?</b>\n"
         "━━━━━━━━━━━━━━━━━━━━\n\n"
         "🔗 <b>По ссылке</b>\n"
-        "Отправьте ссылку на трек, альбом, плейлист или исполнителя из Spotify.\n\n"
+        "Отправьте ссылку на трек, альбом, плейлист или исполнителя.\n\n"
         "🔍 <b>По поиску</b>\n"
-        "Напишите название песни и выберите из результатов.\n\n"
+        "Напишите название песни — выберите из результатов.\n\n"
         "❤️ <b>Liked Songs</b>\n"
-        "/liked — загрузить избранное <i>(нужен Spotify Premium)</i>.\n\n"
+        "Подключите аккаунт Spotify и скачивайте избранное.\n\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
-        "⭐ /favorites — ваши сохранённые песни\n"
-        "⚙️ /settings — качество звука и язык"
+        "⭐ /favorites — сохранённые песни\n"
+        "⚙️ /settings — качество и язык"
     ),
     CHOOSE_LANG="🌐 <b>Выберите язык:</b>",
 
     BTN_CONNECT="🔗 Подключить Spotify",
-    BTN_DISCONNECT="🔌 Отключить",
+    BTN_DISCONNECT="🔌 Отключить аккаунт",
     BTN_LIKED="❤️ Liked Songs",
     BTN_SETTINGS="⚙️ Настройки",
     BTN_ALBUM="💿 Альбом",
     BTN_ARTIST="🎤 Исполнитель",
     BTN_CANCEL="✕ Отмена",
     BTN_START_DL="⬇️ Скачать",
-    BTN_PREV="← Назад",
-    BTN_NEXT="Вперёд →",
-    BTN_LANG="🌐 Язык",
+    BTN_PREV="⬅️ Назад",
+    BTN_NEXT="Вперёд ➡️",
+    BTN_LANG="🌐 Изменить язык",
     BTN_OPEN="🔗 Открыть в Spotify",
     BTN_FAV_ADD="🤍 Сохранить",
     BTN_FAV_SAVED="❤️ Сохранено",
     BTN_FAVORITES="⭐ Избранное",
+    BTN_BACK="← Назад",
+    BTN_HELP="📖 Справка",
 
     BTN_PL_SHUFFLE="🎲 Случайно",
     BTN_PL_SEARCH="🔎 Поиск",
@@ -551,9 +597,15 @@ RU = Texts(
 
     SEARCH_RESULTS=(
         "🔍 <b>«{query}»</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
         "<i>Страница {page} из {pages}</i>"
     ),
-    SEARCH_EMPTY="😔 По запросу <b>«{query}»</b> ничего не найдено.\n<i>Попробуйте другое название.</i>",
+    SEARCH_EMPTY=(
+        "😔 <b>Ничего не найдено</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "По запросу <i>«{query}»</i> результатов нет.\n"
+        "Попробуйте другое название."
+    ),
 
     CONNECT_PROMPT=(
         "🔗 <b>Подключить Spotify</b>\n"
@@ -563,15 +615,19 @@ RU = Texts(
     BTN_CONNECT_URL="🟢 Войти в Spotify",
     CONNECTED_MSG=(
         "✅ <b>Spotify подключён!</b>\n"
-        "/liked — загрузить любимые песни."
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "Используйте /liked для загрузки любимых песен."
     ),
     ALREADY_CONNECTED=(
-        "ℹ️ Spotify уже подключён.\n"
-        "/liked — загрузить."
+        "ℹ️ <b>Spotify уже подключён</b>\n"
+        "❤️ /liked — загрузить."
     ),
-    DISCONNECTED="🔌 Spotify отключён.",
+    DISCONNECTED=(
+        "🔌 <b>Spotify отключён</b>\n"
+        "Используйте /start для повторного подключения."
+    ),
     NOT_CONNECTED=(
-        "⚠️ Spotify не подключён.\n"
+        "⚠️ <b>Spotify не подключён</b>\n"
         "Используйте /start для подключения аккаунта."
     ),
 
@@ -582,7 +638,10 @@ RU = Texts(
         "🎵 Треков: <b>{count}</b>\n\n"
         "<i>Начать загрузку?</i>"
     ),
-    LIKED_EMPTY="😔 Liked Songs пуст.",
+    LIKED_EMPTY=(
+        "😔 <b>Liked Songs пуст</b>\n"
+        "Поставьте лайки песням в Spotify и попробуйте снова."
+    ),
 
     SETTINGS=(
         "⚙️ <b>Настройки</b>\n"
@@ -592,15 +651,21 @@ RU = Texts(
     QUALITY_SET="✅ {quality} kbps выбрано",
     LANG_SET="✅ Русский выбран",
 
-    ERR_NOT_FOUND="😔 Аудио для <b>«{name}»</b> не найдено.",
-    ERR_TOO_LARGE="⚠️ <b>«{name}»</b> слишком большой — лимит Telegram 50 МБ.",
+    ERR_NOT_FOUND=(
+        "😔 <b>Аудио не найдено</b>\n"
+        "Файл для <i>«{name}»</i> недоступен."
+    ),
+    ERR_TOO_LARGE=(
+        "⚠️ <b>Файл слишком большой</b>\n"
+        "<i>«{name}»</i> — лимит Telegram 50 МБ."
+    ),
     ERR_GENERIC="❌ Произошла ошибка. Попробуйте ещё раз.",
     ERR_SPOTIFY_LINK=(
-        "❓ Ссылка не распознана.\n"
-        "<i>Отправьте ссылку на трек, альбом, плейлист или исполнителя.</i>"
+        "❓ <b>Ссылка не распознана</b>\n"
+        "Отправьте ссылку на трек, альбом, плейлист или исполнителя."
     ),
     ERR_BUSY=(
-        "⏳ Идёт загрузка.\n"
+        "⏳ <b>Идёт загрузка</b>\n"
         "Дождитесь завершения или отмените."
     ),
     ERR_NO_CREDENTIALS="🔧 API-ключи Spotify не настроены. Обратитесь к администратору.",
