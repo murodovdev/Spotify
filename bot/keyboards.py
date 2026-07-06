@@ -263,6 +263,13 @@ def recognize_result_kb(track, t: Texts, shazam_url: str = "") -> InlineKeyboard
     return kb.as_markup()
 
 
+def video_result_kb(token: str, t: Texts) -> InlineKeyboardMarkup:
+    """Single-button keyboard shown under a downloaded social media video."""
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text=t.BTN_FIND_MUSIC, callback_data=f"vm:{token}")
+    ]])
+
+
 def cancel_meta_kb(track_id: str, t: Texts) -> InlineKeyboardMarkup:
     """Single-button keyboard for field-input prompts."""
     return InlineKeyboardMarkup(inline_keyboard=[[

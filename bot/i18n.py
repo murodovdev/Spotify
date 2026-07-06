@@ -133,6 +133,14 @@ class Texts:
     BTN_RECOGNIZE_DL: str
     BTN_VIEW_SHAZAM: str
 
+    # --- Video download ---
+    VIDEO_DOWNLOADING: str
+    VIDEO_TOO_LARGE: str
+    VIDEO_PRIVATE: str
+    VIDEO_ERROR: str
+    BTN_FIND_MUSIC: str
+    FINDING_MUSIC: str
+
     # --- Admin ---
     STATS: str
 
@@ -220,6 +228,16 @@ UZ = Texts(
     ),
     BTN_RECOGNIZE_DL="⬇️ Yuklab olish",
     BTN_VIEW_SHAZAM="🎵 Shazam'da ko'rish",
+
+    VIDEO_DOWNLOADING="📥 <i>{platform} yuklanmoqda…</i>",
+    VIDEO_TOO_LARGE=(
+        "⚠️ <b>Video juda katta</b>\n"
+        "Telegram 50 MB dan katta videoni qabul qilmaydi."
+    ),
+    VIDEO_PRIVATE="🔒 Bu video mavjud emas yoki maxfiy.",
+    VIDEO_ERROR="❌ Videoni yuklab bo'lmadi. Havolani tekshiring.",
+    BTN_FIND_MUSIC="🎵 Musiqani topish",
+    FINDING_MUSIC="🎵 <i>Musiqa aniqlanmoqda…</i>",
 
     BTN_CONNECT="🔗 Spotify ulash",
     BTN_DISCONNECT="🔌 Hisobni uzish",
@@ -469,6 +487,16 @@ EN = Texts(
     BTN_RECOGNIZE_DL="⬇️ Download",
     BTN_VIEW_SHAZAM="🎵 View on Shazam",
 
+    VIDEO_DOWNLOADING="📥 <i>Downloading {platform}…</i>",
+    VIDEO_TOO_LARGE=(
+        "⚠️ <b>Video too large</b>\n"
+        "Telegram can't send videos over 50 MB."
+    ),
+    VIDEO_PRIVATE="🔒 This video is unavailable or private.",
+    VIDEO_ERROR="❌ Could not download the video. Check the link.",
+    BTN_FIND_MUSIC="🎵 Find Music",
+    FINDING_MUSIC="🎵 <i>Identifying music…</i>",
+
     BTN_CONNECT="🔗 Connect Spotify",
     BTN_DISCONNECT="🔌 Disconnect account",
     BTN_LIKED="❤️ Liked Songs",
@@ -716,6 +744,16 @@ RU = Texts(
     ),
     BTN_RECOGNIZE_DL="⬇️ Скачать",
     BTN_VIEW_SHAZAM="🎵 Открыть в Shazam",
+
+    VIDEO_DOWNLOADING="📥 <i>Загружаю {platform}…</i>",
+    VIDEO_TOO_LARGE=(
+        "⚠️ <b>Видео слишком большое</b>\n"
+        "Telegram не принимает видео больше 50 МБ."
+    ),
+    VIDEO_PRIVATE="🔒 Это видео недоступно или приватное.",
+    VIDEO_ERROR="❌ Не удалось загрузить видео. Проверьте ссылку.",
+    BTN_FIND_MUSIC="🎵 Найти музыку",
+    FINDING_MUSIC="🎵 <i>Определяю музыку…</i>",
 
     BTN_CONNECT="🔗 Подключить Spotify",
     BTN_DISCONNECT="🔌 Отключить аккаунт",
