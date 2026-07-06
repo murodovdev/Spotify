@@ -24,6 +24,7 @@ class _Store(OrderedDict):
 searches: _Store = _Store()
 pending_collections: _Store = _Store()
 playlists: _Store = _Store()
+pending_videos: _Store = _Store()  # token → original video URL
 
 # Playlist ichida qidiruv rejimi: user_id → playlist token. Foydalanuvchi 🔎 bossa
 # shu yerga yoziladi va keyingi matnli xabar playlist bo'yicha filtrlanadi.
@@ -40,6 +41,10 @@ def stash_collection(user_id: int, title: str, tracks: list[Track]) -> str:
 
 def stash_playlist(playlist: Playlist) -> str:
     return playlists.put(playlist)
+
+
+def stash_video(url: str) -> str:
+    return pending_videos.put(url)
 
 
 # Qidiruv natijalari — id bo'yicha (yt:, it:, dz: sintetik id'lar). Tanlanganda
