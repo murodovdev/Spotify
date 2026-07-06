@@ -17,6 +17,7 @@ from bot.handlers import (
     favorites,
     library,
     links,
+    playlist,
     search,
     settings as settings_handlers,
     start,
@@ -80,6 +81,7 @@ async def main() -> None:
         favorites.router,
         settings_handlers.router,
         links.router,
+        playlist.router,
         search.router,
     )
 

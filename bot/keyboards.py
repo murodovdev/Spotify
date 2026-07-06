@@ -105,70 +105,68 @@ def search_results(tracks, token: str, page: int, t: Texts, per_page: int = 6) -
     return kb.as_markup()
 
 
-def _short_button(text: str, limit: int = 58) -> str:
-    text = " ".join(text.split())
-    return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
-
-
-def _playlist_track_label(track) -> str:
-    icon = "⭐" if getattr(track, "popularity", 0) else "🎵"
-    title = track.title or "Track"
-    artist = f" — {track.artists}" if track.artists else ""
-    duration = ""
-    if track.duration:
-        mins, secs = divmod(track.duration, 60)
-        duration = f"  {mins}:{secs:02d}"
-    return _short_button(f"{icon} {title}{artist}{duration}")
-
-
 def playlist_browser(
-    tracks,
     token: str,
+    tracks,
     page: int,
-    pages: int,
     t: Texts,
-    per_page: int = 10,
-    favorites_mode: bool = False,
+    per_page: int = 12,
+    sort_pop: bool = False,
+    has_pop: bool = False,
 ) -> InlineKeyboardMarkup:
-    rows: list[list[InlineKeyboardButton]] = [
-        [
-            InlineKeyboardButton(text=t.BTN_PLAYLIST_SEARCH, callback_data=f"pl:{token}:search"),
-            InlineKeyboardButton(text=t.BTN_PLAYLIST_SHUFFLE, callback_data=f"pl:{token}:shuffle"),
-        ],
-        [
-            InlineKeyboardButton(
-                text=t.BTN_PLAYLIST_ALL if favorites_mode else t.BTN_PLAYLIST_FAVS,
-                callback_data=f"pl:{token}:all" if favorites_mode else f"pl:{token}:fav",
-            )
-        ],
-    ]
+    """Interaktiv playlist: sahifalangan qo'shiq tugmalari + boshqaruv.
 
+    Har bir qo'shiq tugmasi mavjud `dl:t:` callback'ini ishlatadi — bosilganda
+    faqat o'sha trek yuklanadi, playlist menyusi joyida qoladi.
+    """
+    kb = InlineKeyboardBuilder()
+    pages = max(1, (len(tracks) + per_page - 1) // per_page)
+    page = max(0, min(page, pages - 1))
     start = page * per_page
-    for idx, track in enumerate(tracks[start : start + per_page], start=start):
-        rows.append(
-            [
-                InlineKeyboardButton(
-                    text=_playlist_track_label(track),
-                    callback_data=f"pl:{token}:t:{idx}",
-                )
-            ]
-        )
+    for tr in tracks[start : start + per_page]:
+        star = "⭐ " if sort_pop and tr.popularity else ""
+        label = f"{tr.artists} — {tr.title}".strip(" —") or "🎵"
+        if len(label) > 48:
+            label = label[:47] + "…"
+        if tr.duration:
+            mins, secs = divmod(tr.duration, 60)
+            label = f"{label}  ·  {mins}:{secs:02d}"
+        kb.button(text=f"🎵 {star}{label}", callback_data=f"dl:t:{tr.id}")
+    kb.adjust(1)
 
+    s = 1 if sort_pop else 0
     if pages > 1:
         nav = []
         if page > 0:
             nav.append(
-                InlineKeyboardButton(text=t.BTN_PREV, callback_data=f"pl:{token}:p:{page - 1}")
+                InlineKeyboardButton(
+                    text=t.BTN_PREV, callback_data=f"pl:p:{token}:{page - 1}:{s}"
+                )
             )
-        nav.append(InlineKeyboardButton(text=f"{page + 1}/{pages}", callback_data="noop"))
+        nav.append(
+            InlineKeyboardButton(text=f"{page + 1}/{pages}", callback_data="pl:nop")
+        )
         if page < pages - 1:
             nav.append(
-                InlineKeyboardButton(text=t.BTN_NEXT, callback_data=f"pl:{token}:p:{page + 1}")
+                InlineKeyboardButton(
+                    text=t.BTN_NEXT, callback_data=f"pl:p:{token}:{page + 1}:{s}"
+                )
             )
-        rows.append(nav)
+        kb.row(*nav)
 
-    rows.append([InlineKeyboardButton(text=t.BTN_BACK, callback_data=f"pl:{token}:back")])
-    return InlineKeyboardMarkup(inline_keyboard=rows)
+    controls = [
+        InlineKeyboardButton(text=t.BTN_PL_SHUFFLE, callback_data=f"pl:sh:{token}"),
+        InlineKeyboardButton(text=t.BTN_PL_SEARCH, callback_data=f"pl:s:{token}"),
+    ]
+    if has_pop:
+        # Ommaboplik bo'yicha saralashni almashtirish → 0-sahifaga qaytadi.
+        label = f"{t.BTN_PL_POPULAR} ✓" if sort_pop else t.BTN_PL_POPULAR
+        controls.append(
+            InlineKeyboardButton(text=label, callback_data=f"pl:p:{token}:0:{1 - s}")
+        )
+    kb.row(*controls)
+    kb.row(InlineKeyboardButton(text=t.BTN_PL_CLOSE, callback_data="pl:x"))
+    return kb.as_markup()
 
 
 def confirm_collection(token: str, t: Texts) -> InlineKeyboardMarkup:
