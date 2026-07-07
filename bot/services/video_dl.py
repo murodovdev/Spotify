@@ -11,6 +11,8 @@ import re
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 
+from bot.services import ytdlp_common
+
 log = logging.getLogger(__name__)
 
 _executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="video_dl")
@@ -130,6 +132,7 @@ def _ydl_download_video(url: str, tmpdir: str) -> VideoInfo:
         "merge_output_format": "mp4",
         "socket_timeout": 30,
     }
+    ytdlp_common.apply(ydl_opts)
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
@@ -165,6 +168,7 @@ def _ydl_download_audio(url: str, tmpdir: str) -> str:
         "noplaylist": True,
         "socket_timeout": 30,
     }
+    ytdlp_common.apply(ydl_opts)
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
@@ -226,6 +230,7 @@ def _ydl_extract_meta(video_id: str) -> YTVideoMeta:
         "noplaylist": True,
         "socket_timeout": 20,
     }
+    ytdlp_common.apply(opts)
     url = f"https://www.youtube.com/watch?v={video_id}"
     with yt_dlp.YoutubeDL(opts) as ydl:
         info = ydl.extract_info(url, download=False)
@@ -257,6 +262,7 @@ def _ydl_extract_playlist(playlist_id: str) -> YTPlaylistMeta:
         "extract_flat": True,
         "socket_timeout": 20,
     }
+    ytdlp_common.apply(opts)
     url = f"https://www.youtube.com/playlist?list={playlist_id}"
     with yt_dlp.YoutubeDL(opts) as ydl:
         info = ydl.extract_info(url, download=False)

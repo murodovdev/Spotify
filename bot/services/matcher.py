@@ -11,6 +11,7 @@ from difflib import SequenceMatcher
 
 from yt_dlp import YoutubeDL
 
+from bot.services import ytdlp_common
 from bot.services.spotify import Track
 
 log = logging.getLogger(__name__)
@@ -44,7 +45,7 @@ def _similarity(a: str, b: str) -> float:
 
 
 def _yt_entries(query: str, limit: int) -> list[dict]:
-    with YoutubeDL(_SEARCH_OPTS) as ydl:
+    with YoutubeDL(ytdlp_common.apply(dict(_SEARCH_OPTS))) as ydl:
         info = ydl.extract_info(f"ytsearch{limit}:{query}", download=False)
     return list(info.get("entries") or [])
 
