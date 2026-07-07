@@ -35,6 +35,9 @@ class Texts:
     BTN_EFFECTS: str
     BTN_EDIT_META: str
 
+    # --- Ulashish izohi (inline share caption) ---
+    SHARE_CAPTION: str
+
     # --- Metadata tahrirlash tugmalari ---
     BTN_META_TITLE: str
     BTN_META_ARTIST: str
@@ -190,6 +193,8 @@ UZ = Texts(
     BTN_SIMILAR="🎧 O'xshash",
     BTN_EFFECTS="🎚 Effektlar",
     BTN_EDIT_META="🖊 Ma'lumot",
+
+    SHARE_CAPTION="🎵 @TrackFlowBot orqali ulashildi.",
 
     BTN_META_TITLE="🎵 Sarlavha",
     BTN_META_ARTIST="👤 Ijrochi",
@@ -453,6 +458,8 @@ EN = Texts(
     BTN_EFFECTS="🎚 Effects",
     BTN_EDIT_META="🖊 Edit Info",
 
+    SHARE_CAPTION="🎵 Shared via @TrackFlowBot",
+
     BTN_META_TITLE="🎵 Title",
     BTN_META_ARTIST="👤 Artist",
     BTN_META_ALBUM="💿 Album",
@@ -714,6 +721,8 @@ RU = Texts(
     BTN_SIMILAR="🎧 Похожие",
     BTN_EFFECTS="🎚 Эффекты",
     BTN_EDIT_META="🖊 Инфо",
+
+    SHARE_CAPTION="🎵 Отправлено через @TrackFlowBot",
 
     BTN_META_TITLE="🎵 Название",
     BTN_META_ARTIST="👤 Исполнитель",

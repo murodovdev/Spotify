@@ -120,6 +120,24 @@ async def cache_get(spotify_id: str, bitrate: str) -> str | None:
     return row["file_id"]
 
 
+async def share_resolve(label: str) -> str | None:
+    """Ulashish uchun: "Ijrochi — Sarlavha" yorlig'idan track_id ni tiklaydi.
+
+    In-memory store restart'da yo'qoladi; bu esa track_cache (allaqachon
+    yozilgan) ustidan ishlaydi, shu sabab qayta ishga tushgandan keyin ham
+    ulashish ishlaydi. Kesh maintenance orqali cheklangani uchun skan arzon,
+    ulashish esa kam uchraydigan foydalanuvchi amali (inline cache_time=300).
+    """
+    cur = await db().execute(
+        "SELECT spotify_id FROM track_cache "
+        "WHERE artist || ' — ' || title = ? "
+        "ORDER BY last_used DESC LIMIT 1",
+        (label,),
+    )
+    row = await cur.fetchone()
+    return row["spotify_id"] if row else None
+
+
 async def cache_any_row(spotify_id: str):
     cur = await db().execute(
         "SELECT title, artist FROM track_cache WHERE spotify_id=? LIMIT 1",

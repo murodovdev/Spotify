@@ -140,13 +140,15 @@ async def cb_noop(cq: CallbackQuery) -> None:
 # Requires inline mode enabled in BotFather (@<botname> → Bot Settings → Inline Mode).
 
 @router.inline_query()
-async def inline_share(query: InlineQuery) -> None:
+async def inline_share(query: InlineQuery, t: Texts) -> None:
     raw = query.query.strip()
     if not raw:
         await query.answer([], cache_time=10, is_personal=True)
         return
 
-    track_id = store.resolve_share(raw)
+    # L1: shu jarayondagi in-memory xarita (tez). L2: track_cache ustidan
+    # tiklash — restart/redeploy'dan keyin ham ulashish ishlashi uchun.
+    track_id = store.resolve_share(raw) or await repo.share_resolve(raw)
     if not track_id:
         await query.answer([], cache_time=10, is_personal=True)
         return
@@ -159,20 +161,12 @@ async def inline_share(query: InlineQuery) -> None:
         await query.answer([], cache_time=10, is_personal=True)
         return
 
-    track = await _resolve_track(track_id)
-    if track:
-        caption = (
-            f"🎵 {html.escape(track.title)}\n"
-            f"👤 {html.escape(track.artists)}\n\n"
-            "✨ Shared via @track_drop_bot"
-        )
-    else:
-        caption = "✨ Shared via @track_drop_bot"
-
+    # Toza, lokalizatsiyalangan izoh. Sarlavha/ijrochi/muqova keshlangan audio
+    # faylining o'zida saqlanadi — izohда takrorlamaymiz (2-3 qatorдан oshmasin).
     result = InlineQueryResultCachedAudio(
         id=track_id[-63:],
         audio_file_id=file_id,
-        caption=caption,
+        caption=t.SHARE_CAPTION,
     )
     await query.answer([result], cache_time=300, is_personal=True)
 

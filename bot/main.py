@@ -79,6 +79,7 @@ async def main() -> None:
     dp = Dispatcher()
     dp.message.outer_middleware(UserMiddleware())
     dp.callback_query.outer_middleware(UserMiddleware())
+    dp.inline_query.outer_middleware(UserMiddleware())  # localize the share caption
 
     @dp.errors()
     async def on_error(event: ErrorEvent):
