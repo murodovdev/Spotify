@@ -1,4 +1,3 @@
-import asyncio
 import time
 
 from bot.db.database import db
@@ -35,12 +34,21 @@ async def _ensure_user(user_id: int) -> dict:
     cached = _user_cache.get(user_id)
     if cached is not None:
         return cached
-    cur = await db().execute("SELECT quality, lang FROM users WHERE id=?", (user_id,))
+    cur = await db().execute(
+        "SELECT quality, lang, username, first_name FROM users WHERE id=?", (user_id,)
+    )
     row = await cur.fetchone()
     if row:
-        entry = {"quality": row["quality"], "lang": row["lang"]}
+        entry = {
+            "quality": row["quality"],
+            "lang": row["lang"],
+            "username": row["username"],
+            "first_name": row["first_name"],
+            "_exists": True,
+        }
     else:
-        entry = {"quality": "320", "lang": None}
+        entry = {"quality": "320", "lang": None, "username": None,
+                 "first_name": None, "_exists": False}
     if len(_user_cache) < _CACHE_MAX:
         _user_cache[user_id] = entry
     return entry
@@ -49,12 +57,23 @@ async def _ensure_user(user_id: int) -> dict:
 # --- Foydalanuvchilar ---
 
 async def upsert_user(user_id: int, username: str | None, first_name: str | None) -> None:
+    """Har xabar/bosishда chaqiriladi — profil o'zgarmasa DB'ga YOZMAYDI.
+
+    Bu asosiy yozuv-tejash: yuz minglab foydalanuvchi bilan aks holda har
+    interaksiya bitta yozuvni keltirib chiqarardi.
+    """
+    entry = await _ensure_user(user_id)
+    if entry["_exists"] and entry["username"] == username and entry["first_name"] == first_name:
+        return  # o'zgarish yo'q — yozish shart emas
     await db().execute(
         """INSERT INTO users(id, username, first_name) VALUES(?,?,?)
            ON CONFLICT(id) DO UPDATE SET username=excluded.username,
                                          first_name=excluded.first_name""",
         (user_id, username, first_name),
     )
+    entry["_exists"] = True
+    entry["username"] = username
+    entry["first_name"] = first_name
     await _mark_dirty()
 
 
@@ -90,7 +109,15 @@ async def cache_get(spotify_id: str, bitrate: str) -> str | None:
         (spotify_id, bitrate),
     )
     row = await cur.fetchone()
-    return row["file_id"] if row else None
+    if not row:
+        return None
+    # LRU uchun oxirgi ishlatilgan vaqtни yangilaymiz (batched commit).
+    await db().execute(
+        "UPDATE track_cache SET last_used=? WHERE spotify_id=? AND bitrate=?",
+        (time.time(), spotify_id, bitrate),
+    )
+    await _mark_dirty()
+    return row["file_id"]
 
 
 async def cache_any_row(spotify_id: str):
@@ -103,22 +130,13 @@ async def cache_any_row(spotify_id: str):
 
 async def cache_put(spotify_id: str, bitrate: str, file_id: str, title: str, artist: str) -> None:
     await db().execute(
-        """INSERT INTO track_cache(spotify_id, bitrate, file_id, title, artist)
-           VALUES(?,?,?,?,?)
-           ON CONFLICT(spotify_id, bitrate) DO UPDATE SET file_id=excluded.file_id""",
-        (spotify_id, bitrate, file_id, title, artist),
+        """INSERT INTO track_cache(spotify_id, bitrate, file_id, title, artist, last_used)
+           VALUES(?,?,?,?,?,?)
+           ON CONFLICT(spotify_id, bitrate) DO UPDATE SET file_id=excluded.file_id,
+                                                          last_used=excluded.last_used""",
+        (spotify_id, bitrate, file_id, title, artist, time.time()),
     )
     await db().commit()
-
-
-# --- Tarix ---
-
-async def add_history(user_id: int, spotify_id: str, title: str, artist: str) -> None:
-    await db().execute(
-        "INSERT INTO history(user_id, spotify_id, title, artist) VALUES(?,?,?,?)",
-        (user_id, spotify_id, title, artist),
-    )
-    await _mark_dirty()
 
 
 # --- Sevimlilar ---
@@ -191,9 +209,6 @@ async def is_connected(user_id: int) -> bool:
 
 # --- Tavsiya dvigateli keshlari ---
 
-_REC_FEAT_MAX = 25_000
-
-
 async def rec_feat_get(key: str) -> str | None:
     cur = await db().execute("SELECT payload FROM rec_features WHERE key=?", (key,))
     row = await cur.fetchone()
@@ -201,19 +216,14 @@ async def rec_feat_get(key: str) -> str | None:
 
 
 async def rec_feat_put(key: str, payload: str) -> None:
+    # Cheksiz o'sishni background maintenance (bot/db/maintenance.py) cheklaydi —
+    # bu yerda har yozuvда qimmat DELETE ishlatmaymiz.
     await db().execute(
         """INSERT INTO rec_features(key, payload, updated_at) VALUES(?,?,?)
            ON CONFLICT(key) DO UPDATE SET payload=excluded.payload,
                                           updated_at=excluded.updated_at""",
         (key, payload, time.time()),
     )
-    # Vaqti-vaqti bilan eng eski yozuvlarni tozalaymiz (jadval cheksiz o'smasin)
-    if int(time.time()) % 97 == 0:
-        await db().execute(
-            """DELETE FROM rec_features WHERE key NOT IN
-               (SELECT key FROM rec_features ORDER BY updated_at DESC LIMIT ?)""",
-            (_REC_FEAT_MAX,),
-        )
     await _mark_dirty()
 
 
@@ -232,7 +242,7 @@ async def rec_shown_add(user_id: int, seed_key: str, track_keys: list[str]) -> N
            ON CONFLICT(user_id, seed_key, track_key) DO UPDATE SET shown_at=excluded.shown_at""",
         [(user_id, seed_key, k, now) for k in track_keys],
     )
-    await db().execute("DELETE FROM rec_shown WHERE shown_at < ?", (now - 45 * 86400,))
+    # Eskirgan yozuvlarni background maintenance tozalaydi (har yozuvда emas).
     await _mark_dirty()
 
 

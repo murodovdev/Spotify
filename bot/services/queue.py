@@ -156,7 +156,6 @@ async def process_single(bot: Bot, chat_id: int, user_id: int, track_id: str, t:
                     )
             await repo.incr("downloads")
 
-        await repo.add_history(user_id, track.id, track.title, track.artists)
         await status.delete()
     except TrackNotFound:
         await _safe_edit(status, t.ERR_NOT_FOUND.format(name=html.escape(track.full_name)))
@@ -231,7 +230,6 @@ async def process_collection(
                 try:
                     await _send_cached(bot, chat_id, user_id, payload, track, t)
                     await repo.incr("cache_hits")
-                    await repo.add_history(user_id, track.id, track.title, track.artists)
                     sent += 1
                 except Exception:
                     log.exception("Keshdan yuborishda xato: %s", track.full_name)
@@ -247,7 +245,6 @@ async def process_collection(
                             track.title, track.artists,
                         )
                     await repo.incr("downloads")
-                    await repo.add_history(user_id, track.id, track.title, track.artists)
                     sent += 1
                 except Exception:
                     log.exception("Faylni yuborishda xato: %s", track.full_name)

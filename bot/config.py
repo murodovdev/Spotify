@@ -16,9 +16,20 @@ class Settings(BaseSettings):
     spotify_redirect_uri: str = ""
     admin_id: int = 0
     encryption_key: str = ""
-    db_path: str = "data/bot.db"
+    db_path: str = ""
     port: int = 8080
     lastfm_api_key: str = ""
+
+    @property
+    def database_path(self) -> str:
+        """DB fayl yo'li. Aniq DB_PATH berilmasa: Railway'da volume (/data),
+        lokalda data/ papkasi. Bu yo'l bilan Railway'da sozlash unutilsa ham
+        ma'lumot ephemeral konteynerga tushib qolmaydi."""
+        if self.db_path:
+            return self.db_path
+        if os.getenv("RAILWAY_ENVIRONMENT"):
+            return "/data/bot.db"
+        return "data/bot.db"
 
     @property
     def redirect_uri(self) -> str:

@@ -134,7 +134,6 @@ async def handle_youtube_link(message: Message, t: Texts, bot: Bot) -> None:
             reply_markup=keyboards.post_download_kb(track, t, is_fav),
         )
         await repo.incr("cache_hits")
-        await repo.add_history(user_id, track.id, track.title, track.artists)
         await status.delete()
         return
 
@@ -169,7 +168,6 @@ async def handle_youtube_link(message: Message, t: Texts, bot: Bot) -> None:
                 )
 
         await repo.incr("downloads")
-        await repo.add_history(user_id, track.id, track.title, track.artists)
         await status.delete()
 
     except TrackNotFound:
