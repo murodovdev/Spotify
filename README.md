@@ -1,111 +1,189 @@
-# 🎧 Spotify Downloader Bot
+<div align="center">
 
-Spotify havolalari orqali musiqalarni **maksimal tezlikda** topib yuboradigan Telegram bot.
+# 🎧 TrackFlow
 
-## Imkoniyatlar
+**A fast, multi-source music bot for Telegram.**
 
-- 🔗 **Havola yuborish** — trek, albom, playlist, ijrochi havolalarini avtomatik aniqlaydi
-- 🔍 **Matnli qidiruv** — qo'shiq nomini yozing, o'zi topadi
-- ❤️ **Liked Songs** — Spotify hisobingizni ulab, sevimli qo'shiqlaringizni to'liq yuklab oling
-- ⚡ **file_id kesh** — bir marta yuklab olingan trek keyingi safar **bir soniyada** yuboriladi
-- 🚀 **Parallel yuklab olish** — albom/playlist 3 ta trekdan bir vaqtda qayta ishlanadi
-- 🏷 **To'liq metadata** — ID3 teglar, albom muqovasi, davomiylik
-- ⚙️ Sifat tanlash (128/320 kbps), tarix, progress-bar, bekor qilish tugmasi
+Send a Spotify, YouTube, or social-media link — or just type a song name — and
+TrackFlow finds the best audio, tags it, and delivers it in seconds.
 
-> **Eslatma:** Spotify audio faylni to'g'ridan-to'g'ri bermaydi. Bot Spotify'dan metadata oladi,
-> audioni esa YouTube Music'dan eng mos variantini topib yuklab oladi (spotdl usuli).
-> Bot shaxsiy foydalanish uchun mo'ljallangan.
+[![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![aiogram](https://img.shields.io/badge/aiogram-3.x-2CA5E0?logo=telegram&logoColor=white)](https://docs.aiogram.dev/)
+[![Deploy on Railway](https://img.shields.io/badge/Deploy-Railway-0B0D0E?logo=railway&logoColor=white)](https://railway.app/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-> **Muhim (2025 o'zgarishi):** Spotify endi Web API ilovalari uchun ilova egasining hisobida
-> **Premium** obuna talab qiladi. Premium bo'lmasa ham bot ishlayveradi — avtomatik **embed
-> rejimga** o'tadi (ochiq open.spotify.com/embed sahifalaridan metadata oladi). Embed rejim
-> cheklovlari: playlist'dan ~50 trekgacha olinadi, matn qidiruv YouTube Music orqali bajariladi,
-> **Liked Songs esa ishlamaydi** (bunga rasmiy API + Premium shart).
+</div>
 
-## 1. Telegram bot token olish
+---
 
-1. Telegram'da [@BotFather](https://t.me/BotFather) ga yozing
-2. `/newbot` → nom va username tanlang
-3. Berilgan tokenni `.env` fayliga `BOT_TOKEN=` sifatida yozing
+## Overview
 
-## 2. Spotify API kalitlarini olish
+TrackFlow is a self-hostable Telegram bot that turns links and search queries
+into high-quality, fully-tagged audio files. It reads metadata from Spotify,
+finds the closest matching source on YouTube (the same approach as `spotdl`),
+downloads and transcodes it with `yt-dlp` + FFmpeg, and caches the result so the
+next request for the same track is instant.
 
-1. [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard) ga kiring (oddiy Spotify hisobingiz bilan)
-2. **Create app** tugmasini bosing:
-   - **App name / description** — istalgan nom
-   - **Redirect URI** — Railway'dagi domeningiz: `https://<app-nomi>.up.railway.app/callback`
-     (lokal test uchun `http://localhost:8080/callback` ham qo'shib qo'ying)
-   - **Which API/SDKs are you planning to use?** — Web API
-3. **Settings** dan **Client ID** va **Client Secret** ni ko'chirib oling
-4. Ularni `.env` ga yozing:
-   ```
-   SPOTIFY_CLIENT_ID=...
-   SPOTIFY_CLIENT_SECRET=...
-   ```
+It also recognizes music from voice/video clips, downloads audio from YouTube and
+social-media video links, and ships with a full admin control panel.
 
-## 3. Lokal ishga tushirish (Windows)
+> [!NOTE]
+> Spotify does not serve audio directly. TrackFlow uses Spotify only for
+> metadata (title, artist, album, cover, duration) and sources the audio from
+> YouTube Music. Intended for personal use — respect the copyright laws in your
+> jurisdiction.
 
-```powershell
-# FFmpeg o'rnatish (bir marta)
-winget install ffmpeg
+## Features
 
-# Loyiha papkasida
+- 🔗 **Link detection** — paste a Spotify track, album, playlist, or artist link and TrackFlow resolves it automatically.
+- 🔍 **Text search** — type a song name; the search engine finds and returns the best match.
+- ▶️ **YouTube & video links** — extract audio from YouTube, or download videos from popular social platforms.
+- 🎤 **Music recognition** — forward a voice note, audio, or video clip and TrackFlow identifies the track (Shazam-powered).
+- ❤️ **Liked Songs** — connect your Spotify account via OAuth and bulk-download your library.
+- ⭐ **Favorites, history & playlists** — personal library management inside the chat.
+- ⚡ **Instant cache** — Telegram `file_id` caching means a previously downloaded track is re-sent in about a second.
+- 🚀 **Parallel downloads** — albums and playlists are processed several tracks at a time.
+- 🏷 **Full metadata** — ID3 tags, embedded cover art, and duration on every file.
+- 🎚 **Quality control** — choose 128 / 320 kbps, apply audio effects, and edit metadata.
+- 🎯 **Recommendations** — a "similar songs" engine built on ListenBrainz, Deezer, local audio analysis, and (optionally) Last.fm.
+- 🌍 **Multi-language** — Uzbek, English, and Russian UI.
+- 🛡 **Admin panel** — roles, bans, broadcasts, maintenance mode, live logs, and usage dashboards.
+
+## Supported platforms
+
+| Source | Capability |
+|---|---|
+| Spotify | Track / album / playlist / artist links, text search, Liked Songs (OAuth) |
+| YouTube / YouTube Music | Audio extraction from links, primary audio source for search |
+| Social video platforms | Video download + "Find Music" recognition |
+| Local media | Recognize audio/voice/video clips sent to the bot |
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Language | Python 3.12 (asyncio, `uvloop` on Linux) |
+| Bot framework | [aiogram 3](https://docs.aiogram.dev/) |
+| Web / OAuth server | [aiohttp](https://docs.aiohttp.org/) |
+| Media | [yt-dlp](https://github.com/yt-dlp/yt-dlp) + FFmpeg, [mutagen](https://mutagen.readthedocs.io/) |
+| Storage | SQLite via [aiosqlite](https://aiosqlite.omnilib.dev/) |
+| Config | [pydantic-settings](https://docs.pydantic.dev/latest/concepts/pydantic_settings/) |
+| Security | [cryptography](https://cryptography.io/) (Fernet token encryption) |
+| Recognition | [shazamio](https://github.com/shazamio/ShazamIO) |
+| Analysis | NumPy (audio feature extraction) |
+| Deployment | Docker, [Railway](https://railway.app/) |
+
+## Quick start (local)
+
+**Prerequisites:** Python 3.12+, [FFmpeg](https://ffmpeg.org/), and a Telegram bot
+token from [@BotFather](https://t.me/BotFather).
+
+```bash
+# 1. Install FFmpeg
+#    Windows:  winget install ffmpeg
+#    macOS:    brew install ffmpeg
+#    Debian:   sudo apt install ffmpeg
+
+# 2. Clone and enter the project
+git clone https://github.com/murodovdev/Spotify.git trackflow
+cd trackflow
+
+# 3. Create a virtual environment and install dependencies
 python -m venv .venv
-.venv\Scripts\activate
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-# .env faylini tayyorlash
-copy .env.example .env
-# .env ni ochib BOT_TOKEN va Spotify kalitlarini kiriting
+# 4. Configure environment
+cp .env.example .env             # Windows: copy .env.example .env
+#    Edit .env and set BOT_TOKEN (Spotify keys are optional — see below)
 
-# Ishga tushirish
+# 5. Run
 python -m bot.main
 ```
 
-## 4. Railway'ga deploy qilish
+The bot starts polling immediately and launches a local OAuth server on
+`http://127.0.0.1:8080` (used only for the Spotify "Connect account" flow).
 
-1. Loyihani GitHub'ga push qiling (`.env` **hech qachon** push qilinmasin — `.gitignore` da bor)
-2. [railway.app](https://railway.app) → **New Project** → **Deploy from GitHub repo**
-3. **Variables** bo'limida quyidagilarni qo'shing:
+## Environment variables
 
-   | O'zgaruvchi | Qiymat |
-   |---|---|
-   | `BOT_TOKEN` | BotFather'dan olingan token |
-   | `SPOTIFY_CLIENT_ID` | Spotify dashboard'dan |
-   | `SPOTIFY_CLIENT_SECRET` | Spotify dashboard'dan |
-   | `DB_PATH` | `/data/bot.db` |
-   | `ADMIN_ID` | Telegram ID'ingiz (ixtiyoriy, /stats uchun) |
+Only `BOT_TOKEN` is required. Spotify credentials unlock link resolution and
+Liked Songs; without them the bot automatically falls back to **embed mode**
+(metadata from public `open.spotify.com/embed` pages, YouTube-based search).
 
-4. **Settings → Networking → Generate Domain** — port so'ralsa `8080` kiriting
-5. **Volume qo'shing**: xizmat ustiga o'ng tugma → **Attach Volume** → mount path: `/data`
-   (kesh va foydalanuvchi ma'lumotlari redeploy'da saqlanib qoladi)
-6. Spotify dashboard'dagi **Redirect URI** ni Railway domeningizga moslang:
-   `https://<domeningiz>/callback`
+| Variable | Required | Description |
+|---|:---:|---|
+| `BOT_TOKEN` | ✅ | Telegram bot token from @BotFather. |
+| `SPOTIFY_CLIENT_ID` | | Spotify app client ID (enables full API + Liked Songs). |
+| `SPOTIFY_CLIENT_SECRET` | | Spotify app client secret. |
+| `SPOTIFY_REDIRECT_URI` | | OAuth callback. Auto-derived if left blank. |
+| `ADMIN_ID` | | Telegram user ID granted owner/admin access. |
+| `ENCRYPTION_KEY` | | Fernet key for encrypting stored tokens. Derived from `BOT_TOKEN` if blank. |
+| `DB_PATH` | | SQLite path. Auto: `/data/bot.db` on Railway, `data/bot.db` locally. |
+| `PORT` | | OAuth web server port (default `8080`). |
+| `MAX_DOWNLOADS` | | Max concurrent downloads (default `4`). |
+| `LASTFM_API_KEY` | | Optional — strengthens the recommendation engine. |
+| `YOUTUBE_COOKIES` / `_B64` / `_FILE` | | Optional YouTube cookies to bypass bot checks. See [Configuration](docs/CONFIGURATION.md). |
 
-## Buyruqlar
+See **[docs/CONFIGURATION.md](docs/CONFIGURATION.md)** for the full reference,
+including how to obtain Spotify credentials and export YouTube cookies.
 
-| Buyruq | Vazifasi |
+## Deployment
+
+TrackFlow is built to run on [Railway](https://railway.app/) with a persistent
+volume and zero extra infrastructure. A one-page walkthrough — including the
+critical volume setup that keeps user data across redeploys — is in
+**[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**.
+
+```bash
+# Container build works anywhere Docker runs:
+docker build -t trackflow .
+docker run --env-file .env -p 8080:8080 -v "$(pwd)/data:/data" trackflow
+```
+
+## Bot commands
+
+| Command | Description |
 |---|---|
-| `/start` | Asosiy menyu |
-| `/liked` | Liked Songs yuklab olish |
-| `/settings` | Sifat sozlamalari (128/320 kbps) |
-| `/history` | Oxirgi yuklab olinganlar |
-| `/stats` | Statistika (faqat admin) |
+| `/start` | Main menu |
+| `/liked` | Download your Spotify Liked Songs |
+| `/favorites` | Your saved favorites |
+| `/settings` | Quality (128 / 320 kbps) and language |
+| `/help` | Usage help |
+| `/admin` | Admin control panel (authorized users only) |
 
-## Arxitektura
+## Architecture
 
 ```
 bot/
-├── main.py          # entry: polling + OAuth web-server
-├── config.py        # .env sozlamalari
-├── texts.py         # barcha matnlar (UZ)
-├── keyboards.py     # inline tugmalar
-├── handlers/        # start, links, search, library, settings
-├── services/
-│   ├── spotify.py   # async Spotify Web API klienti (metadata, OAuth, Liked)
-│   ├── matcher.py   # YouTube'dan eng mos audio topish (yt-dlp qidiruvi)
-│   ├── downloader.py# yt-dlp → MP3 → ID3 teglar + muqova
-│   └── queue.py     # kesh, parallel yuklash, progress, bekor qilish
-├── db/              # SQLite: userlar, file_id kesh, tarix, tokenlar
-└── web/oauth.py     # Spotify OAuth callback sahifasi
+├── main.py            # Entry point: polling loop + OAuth web server + lifecycle
+├── config.py          # Environment-based settings (pydantic)
+├── i18n.py            # Localized strings (UZ / EN / RU)
+├── keyboards.py       # Inline keyboards
+├── security.py        # Token encryption helpers
+├── handlers/          # Telegram update handlers (links, search, library, video, …)
+├── services/          # Core logic
+│   ├── spotify.py     #   Async Spotify Web API client (metadata, OAuth, Liked)
+│   ├── search_engine.py #  Query → best-match resolution
+│   ├── matcher.py     #   Pick the closest YouTube source for a track
+│   ├── downloader.py  #   yt-dlp → MP3 → ID3 tags + cover art
+│   ├── queue.py       #   Caching, parallel downloads, progress, cancellation
+│   ├── recognizer.py  #   Shazam-based music recognition
+│   ├── recommender.py #   "Similar songs" engine
+│   ├── video_dl.py    #   Social-media video downloads
+│   └── audio_*.py     #   Effects and analysis
+├── db/                # SQLite layer (users, file_id cache, history, tokens)
+├── admin/             # Admin control panel (roles, bans, broadcast, dashboard)
+└── web/oauth.py       # Spotify OAuth callback + /health endpoint
 ```
+
+For a deeper tour of the request lifecycle and data flow, see
+**[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
+
+## Contributing
+
+Contributions are welcome. Please read **[CONTRIBUTING.md](CONTRIBUTING.md)** for
+the development setup, coding style, and pull-request workflow.
+
+## License
+
+Released under the [MIT License](LICENSE).

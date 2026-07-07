@@ -4,10 +4,12 @@ builder = "dockerfile"
 [deploy]
 restartPolicyType = "always"
 healthcheckPath = "/health"
+# numReplicas MUST stay 1:
+#   (a) the persistent volume attaches to a single instance only;
+#   (b) two long-polling instances raise TelegramConflictError.
 numReplicas = 1
-# ⚠️  PERSISTENCE — MAJBURIY:
-# Railway UI → Service → Variables → "Add Volume", mount path = /data
-# Kod DB_PATH bo'sh bo'lsa avtomat /data/bot.db ishlatadi (config.database_path).
-# Volume BO'LMASA har redeploy'da barcha foydalanuvchi ma'lumoti yo'qoladi.
-# numReplicas 1 bo'lishi shart: (a) volume faqat bitta instance'ga ulanadi,
-# (b) polling'da 2 instance TelegramConflictError beradi.
+
+# ── Persistence (REQUIRED) ───────────────────────────────────────────────────
+# Attach a volume at mount path /data (Railway UI → Service → Attach Volume).
+# With DB_PATH unset, the app writes to /data/bot.db automatically.
+# WITHOUT a volume, every redeploy wipes all user data.
