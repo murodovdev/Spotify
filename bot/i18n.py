@@ -196,7 +196,7 @@ UZ = Texts(
     BTN_EFFECTS="🎚 Effektlar",
     BTN_EDIT_META="🖊 Ma'lumot",
 
-    SHARE_CAPTION="🎵 @TrackFlowBot orqali ulashildi.",
+    SHARE_CAPTION="🎵 @track_drop_bot orqali ulashildi.",
 
     BTN_META_TITLE="🎵 Sarlavha",
     BTN_META_ARTIST="👤 Ijrochi",
@@ -462,7 +462,7 @@ EN = Texts(
     BTN_EFFECTS="🎚 Effects",
     BTN_EDIT_META="🖊 Edit Info",
 
-    SHARE_CAPTION="🎵 Shared via @TrackFlowBot",
+    SHARE_CAPTION="🎵 Shared via @track_drop_bot",
 
     BTN_META_TITLE="🎵 Title",
     BTN_META_ARTIST="👤 Artist",
@@ -729,7 +729,7 @@ RU = Texts(
     BTN_EFFECTS="🎚 Эффекты",
     BTN_EDIT_META="🖊 Инфо",
 
-    SHARE_CAPTION="🎵 Отправлено через @TrackFlowBot",
+    SHARE_CAPTION="🎵 Отправлено через @track_drop_bot",
 
     BTN_META_TITLE="🎵 Название",
     BTN_META_ARTIST="👤 Исполнитель",
