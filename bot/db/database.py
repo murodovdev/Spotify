@@ -32,7 +32,9 @@ CREATE TABLE IF NOT EXISTS users(
     created_at  TEXT NOT NULL DEFAULT (datetime('now')),
     last_active REAL NOT NULL DEFAULT 0
 );
-CREATE INDEX IF NOT EXISTS idx_users_last_active ON users(last_active);
+-- idx_users_last_active _migrate() v3'да yaratiladi (eski bazada last_active
+-- ustuni ALTER'dan keyin paydo bo'ladi — BASE_SCHEMA _migrate'дан oldin ishga
+-- tushadi, shu sabab bu yerда indeks yaratib bo'lmaydi).
 
 -- Yuklab olingan audio uchun Telegram file_id keshi. last_used LRU eviction
 -- uchun (background maintenance eng kam ishlatilganini o'chiradi).
