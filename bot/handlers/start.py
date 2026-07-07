@@ -16,7 +16,11 @@ router = Router(name="start")
 def _welcome(t: Texts, first_name: str | None) -> str:
     name = html.escape((first_name or "").strip()) or "🎧"
     override = settings_store.get("welcome_override")
-    template = override if override else t.WELCOME
+    # Admin override'ni HTML sifatida ESCAPE qilamiz: noto'g'ri HTML (masalan
+    # "I <3 music" yoki yopilmagan teg) aks holda parse_mode=HTML'да /start'ни
+    # HAR bir foydalanuvchi uchun buzardi. {name} placeholder escape'дан omon
+    # qoladi; t.WELCOME esa bizники — ishonchli, escapelanmaydi.
+    template = html.escape(override) if override else t.WELCOME
     try:
         text = template.format(name=name)
     except (KeyError, IndexError, ValueError):

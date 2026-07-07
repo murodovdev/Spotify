@@ -72,21 +72,24 @@ class UserMiddleware(BaseMiddleware):
             t = get_texts(lang)
             data["t"] = t
 
+            # Rol (in-memory kesh — DB o'qishsiz). Adminlar ban va maintenance'дан
+            # ozod: aks holda noto'g'ri/g'arazli ban egani botдан butunlay chiqarib
+            # yuborardi va u o'zini panel orqali qutqara olmasди.
+            role = await admin_repo.get_role(user.id)
+
             # Ban enforcement (arzon — in-memory kesh).
             blocked, reason = admin_repo.cached_block(user.id)
             if reason == "__expired__":
                 await admin_repo.unban(user.id)  # muddati o'tган suspend
                 blocked = False
-            if blocked:
+            if blocked and role is None:
                 await _notify_blocked(event, reason)
                 return  # handlerни ishga tushirmaymiz
 
             # Maintenance rejimi — faqat adminlar o'tadi.
-            if settings_store.is_maintenance():
-                role = await admin_repo.get_role(user.id)
-                if role is None:
-                    await _notify_maintenance(event)
-                    return
+            if role is None and settings_store.is_maintenance():
+                await _notify_maintenance(event)
+                return
         return await handler(event, data)
 
 
@@ -121,6 +124,10 @@ async def main() -> None:
     await settings_store.load()
     await admin_repo.load_bans()
     await admin_repo.load_admins()
+    # Qayta ishga tushishдан oldin tugamagan broadcastlar 'failed' deb belgilanadi.
+    stale = await admin_repo.reconcile_broadcasts()
+    if stale:
+        log.info("Reconcile: %d tugamagan broadcast 'failed' deb belgilandi", stale)
     # Oldingi ishga tushishdan qolgan orphan temp fayllarni tozalaymiz (crash/deploy).
     removed = tempsweep.sweep(max_age=0)
     if removed:

@@ -6,13 +6,16 @@ broadcast.py да. Bu modul dashboard + o'qish bo'limlari + oddiy amallarни us
 
 from __future__ import annotations
 
+import asyncio
 import html
 import logging
 import os
 import time
 
 from aiogram import F, Router
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from bot.admin import keyboards, logbuf, repo, roles, settings_store
@@ -57,6 +60,15 @@ def _ago(ts: float) -> str:
 async def _edit(cq: CallbackQuery, text: str, kb) -> None:
     try:
         await cq.message.edit_text(text, reply_markup=kb, disable_web_page_preview=True)
+    except TelegramBadRequest as e:
+        # "message is not modified" — Refresh bosilганда kontent bir xil bo'lsa;
+        # jim o'tамиз (aks holda pastdaги answer dublikat xabar yaratardi).
+        if "not modified" in str(e).lower():
+            return
+        try:
+            await cq.message.answer(text, reply_markup=kb, disable_web_page_preview=True)
+        except Exception:
+            pass
     except Exception:
         try:
             await cq.message.answer(text, reply_markup=kb, disable_web_page_preview=True)
@@ -82,12 +94,14 @@ async def _home_text(role: str) -> str:
 
 
 @router.message(Command("admin"))
-async def cmd_admin(message: Message, role: str) -> None:
+async def cmd_admin(message: Message, role: str, state: FSMContext) -> None:
+    await state.clear()  # yarim qolgan oqimni (ban/dm/qidiruv…) tozalaymiz
     await message.answer(await _home_text(role), reply_markup=keyboards.dashboard(role))
 
 
 @router.callback_query(F.data == "adm:home")
-async def cb_home(cq: CallbackQuery, role: str) -> None:
+async def cb_home(cq: CallbackQuery, role: str, state: FSMContext) -> None:
+    await state.clear()
     await cq.answer()
     await _edit(cq, await _home_text(role), keyboards.dashboard(role))
 
@@ -95,7 +109,11 @@ async def cb_home(cq: CallbackQuery, role: str) -> None:
 # ─────────────────────────── Section dispatch ───────────────────────────────
 
 @router.callback_query(F.data.startswith("adm:sec:"))
-async def cb_section(cq: CallbackQuery, role: str) -> None:
+async def cb_section(cq: CallbackQuery, role: str, state: FSMContext) -> None:
+    # Har qanday bo'limга o'tish yarim qolgan FSM oqimini tozalaydi — aks holda
+    # "Cancel" (bo'limga qaytadi) holatни tozalamas edi va keyingi yozilган matn
+    # oldingi nishonга (masalan ban sababi sifatida) qo'llanardi.
+    await state.clear()
     key = cq.data.split(":", 2)[2]
     render = _RENDERERS.get(key)
     if render is None:
@@ -106,7 +124,12 @@ async def cb_section(cq: CallbackQuery, role: str) -> None:
     if perm and not await ensure_perm(cq, role, perm):
         return
     await cq.answer()
-    text, kb = await render(role)
+    try:
+        text, kb = await render(role)
+    except Exception:
+        log.exception("Admin section %s render failed", key)
+        await cq.answer("⚠️ Couldn't load this section — check Logs.", show_alert=True)
+        return
     await _edit(cq, text, kb)
 
 
@@ -220,7 +243,9 @@ async def _sec_perf(role: str):
     try:
         import psutil  # type: ignore
 
-        cpu = psutil.cpu_percent(interval=0.3)
+        # cpu_percent(interval=…) bloklaydi — bitta event loopда butun botни
+        # muzlatib qo'yardi. Threadга chiqaramiz.
+        cpu = await asyncio.to_thread(psutil.cpu_percent, 0.3)
         mem = psutil.virtual_memory()
         disk = psutil.disk_usage(os.path.dirname(db_path()) or ".")
         proc = psutil.Process()
@@ -289,7 +314,8 @@ async def _logs_text(kind: str) -> str:
     if kind == "AUDIT":
         rows = await repo.recent_audit(15)
         body = "\n".join(
-            f"  <code>{logbuf.fmt_ts(r['at'])}</code> {html.escape(r['action'])}"
+            f"  <code>{logbuf.fmt_ts(r['at'])}</code> <code>{r['admin_id']}</code> "
+            f"{html.escape(r['action'])}"
             f"{(' → ' + html.escape(str(r['target']))) if r['target'] else ''}"
             for r in rows
         ) or "  No audit entries."
@@ -355,6 +381,21 @@ async def cb_db_check(cq: CallbackQuery, role: str) -> None:
     await _edit(cq, f"{text}\n\n{note}", kb)
 
 
+@router.callback_query(F.data == "adm:music:clearc")
+async def cb_music_clear_confirm(cq: CallbackQuery, role: str) -> None:
+    if not await ensure_perm(cq, role, Perm.MANAGE_MUSIC):
+        return
+    await cq.answer()
+    await _edit(
+        cq,
+        f"🗑 <b>Clear metadata cache?</b>\n{HR}\n"
+        f"This wipes the recommendation feature cache (<code>rec_features</code>). "
+        f"It will be rebuilt on demand — safe, but the next few similar-song "
+        f"lookups will be slower.",
+        keyboards.confirm_action("adm:music:clearfeat", "sec:music", "🗑 Clear"),
+    )
+
+
 @router.callback_query(F.data == "adm:music:clearfeat")
 async def cb_music_clear(cq: CallbackQuery, role: str) -> None:
     if not await ensure_perm(cq, role, Perm.MANAGE_MUSIC):
@@ -374,6 +415,9 @@ async def cb_setting_toggle(cq: CallbackQuery, role: str) -> None:
     if not await ensure_perm(cq, role, Perm.MANAGE_SETTINGS):
         return
     key = cq.data.split(":", 3)[3]
+    if key not in settings_store.BOOL_KEYS:
+        await cq.answer("Not a toggle")
+        return
     new = await settings_store.toggle(key)
     await repo.add_audit(cq.from_user.id, "setting_toggle", key, str(new))
     await cq.answer(f"{key} → {'ON' if new else 'OFF'}")
@@ -395,6 +439,20 @@ async def _sec_settings(role: str):
 
 
 # ── System: remove admin (super only) ────────────────────────────────────────
+
+@router.callback_query(F.data.startswith("adm:sys:rmc:"))
+async def cb_sys_remove_confirm(cq: CallbackQuery, role: str) -> None:
+    if not await ensure_perm(cq, role, Perm.MANAGE_ADMINS):
+        return
+    uid = int(cq.data.rsplit(":", 1)[1])
+    await cq.answer()
+    await _edit(
+        cq,
+        f"🗑 <b>Remove admin</b> <code>{uid}</code>?\n{HR}\n"
+        f"They will immediately lose all panel access.",
+        keyboards.confirm_action(f"adm:sys:rm:{uid}", "sec:sys", "🗑 Remove"),
+    )
+
 
 @router.callback_query(F.data.startswith("adm:sys:rm:"))
 async def cb_sys_remove(cq: CallbackQuery, role: str) -> None:

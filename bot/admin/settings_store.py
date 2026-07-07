@@ -76,6 +76,10 @@ async def set(key: str, value) -> None:
 
 
 async def toggle(key: str) -> bool:
+    # Faqat boolean sozlamalar — aks holda (masalan forged callback) int/str
+    # qiymatni buzardik (download_limit 5 → 0).
+    if key not in BOOL_KEYS:
+        raise ValueError(f"{key!r} is not a boolean setting")
     new = not bool(get(key))
     await set(key, new)
     return new

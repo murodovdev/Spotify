@@ -109,9 +109,12 @@ async def on_user_search(message: Message, role: str, state: FSMContext) -> None
 
 
 @router.callback_query(F.data.startswith("adm:u:v:"))
-async def cb_user_view(cq: CallbackQuery, role: str) -> None:
+async def cb_user_view(cq: CallbackQuery, role: str, state: FSMContext) -> None:
     if not await ensure_perm(cq, role, Perm.MANAGE_USERS):
         return
+    # Profilга qaytish yarim qolgan ban/dm oqimini tozalaydi (Cancel shu yerга
+    # keladi) — aks holda keyingi matn oldingi nishonга qo'llanardi.
+    await state.clear()
     user_id = int(cq.data.rsplit(":", 1)[1])
     res = await _profile(user_id)
     await cq.answer()
@@ -122,6 +125,21 @@ async def cb_user_view(cq: CallbackQuery, role: str) -> None:
 
 
 # ─────────────────────────────── Reset ──────────────────────────────────────
+
+@router.callback_query(F.data.startswith("adm:u:rstc:"))
+async def cb_user_reset_confirm(cq: CallbackQuery, role: str) -> None:
+    if not await ensure_perm(cq, role, Perm.MANAGE_USERS):
+        return
+    user_id = int(cq.data.rsplit(":", 1)[1])
+    await cq.answer()
+    await _edit(
+        cq,
+        f"♻️ <b>Reset user</b> <code>{user_id}</code>?\n{HR}\n"
+        f"Clears their language & quality settings and <b>deletes all their "
+        f"favorites</b>. This cannot be undone.",
+        keyboards.confirm_action(f"adm:u:reset:{user_id}", f"u:v:{user_id}", "♻️ Reset"),
+    )
+
 
 @router.callback_query(F.data.startswith("adm:u:reset:"))
 async def cb_user_reset(cq: CallbackQuery, role: str) -> None:
@@ -144,6 +162,9 @@ async def cb_user_ban(cq: CallbackQuery, role: str, state: FSMContext) -> None:
     if not await ensure_perm(cq, role, Perm.MODERATE):
         return
     user_id = int(cq.data.rsplit(":", 1)[1])
+    if await repo.get_role(user_id) is not None:
+        await cq.answer("⛔ This user is an admin — remove their role first.", show_alert=True)
+        return
     await state.set_state(AdminFSM.ban_reason)
     await state.update_data(target=user_id, kind="ban", until=0)
     await cq.answer()
@@ -160,6 +181,9 @@ async def cb_user_suspend(cq: CallbackQuery, role: str) -> None:
     if not await ensure_perm(cq, role, Perm.MODERATE):
         return
     user_id = int(cq.data.rsplit(":", 1)[1])
+    if await repo.get_role(user_id) is not None:
+        await cq.answer("⛔ This user is an admin — remove their role first.", show_alert=True)
+        return
     until = time.time() + 86400
     await repo.set_ban(user_id, "suspend", "Temporary 24h suspension", until, cq.from_user.id)
     await repo.add_audit(cq.from_user.id, "suspend_user", str(user_id), "24h")
@@ -178,6 +202,14 @@ async def on_ban_reason(message: Message, role: str, state: FSMContext) -> None:
     await state.clear()
     user_id = data["target"]
     reason = (message.text or "").strip()
+    if reason.startswith("/"):
+        # Buyruq — admin ban oqimidan chiqmoqchi; banlamaymiz.
+        await message.answer("Ban cancelled.", reply_markup=keyboards.users_home())
+        return
+    if await repo.get_role(user_id) is not None:
+        await message.answer("⛔ This user is an admin — remove their role first.",
+                             reply_markup=keyboards.users_home())
+        return
     reason = "" if reason == "-" else reason[:200]
     await repo.set_ban(user_id, data["kind"], reason or None, data["until"], message.from_user.id)
     await repo.add_audit(message.from_user.id, "ban_user", str(user_id), reason)

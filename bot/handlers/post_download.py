@@ -24,6 +24,7 @@ from mutagen.id3 import APIC, ID3, TALB, TCON, TDRC, TIT2, TPE1
 from mutagen.id3._util import ID3NoHeaderError
 
 from bot import keyboards, store
+from bot.admin import settings_store
 from bot.db import repo
 from bot.i18n import Texts, track_caption
 from bot.services import audio_effects, downloader, recommender
@@ -175,6 +176,9 @@ async def inline_share(query: InlineQuery, t: Texts) -> None:
 
 @router.callback_query(F.data.startswith("sim:"))
 async def cb_similar(cq: CallbackQuery, t: Texts) -> None:
+    if not settings_store.feature_enabled("similar"):
+        await cq.answer("⚠️ Temporarily unavailable.", show_alert=True)
+        return
     track_id = cq.data[4:]
     track = await _resolve_track(track_id)
     if not track:
@@ -215,6 +219,9 @@ async def cb_similar(cq: CallbackQuery, t: Texts) -> None:
     ~F.data.startswith("ea:back:")
 )
 async def cb_effects_menu(cq: CallbackQuery, t: Texts) -> None:
+    if not settings_store.feature_enabled("effects"):
+        await cq.answer("⚠️ Temporarily unavailable.", show_alert=True)
+        return
     track_id = cq.data[3:]
     await cq.answer()
     try:
@@ -230,6 +237,9 @@ async def cb_effects_menu(cq: CallbackQuery, t: Texts) -> None:
 @router.callback_query(F.data.startswith("ea:apply:"))
 async def cb_apply_effect(cq: CallbackQuery, t: Texts, bot: Bot) -> None:
     # "ea:apply:{effect}:{track_id}" — split at most 3 times to preserve track_id colons
+    if not settings_store.feature_enabled("effects"):
+        await cq.answer("⚠️ Temporarily unavailable.", show_alert=True)
+        return
     parts = cq.data.split(":", 3)
     effect = parts[2]
     track_id = parts[3]

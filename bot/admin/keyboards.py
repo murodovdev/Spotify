@@ -76,7 +76,7 @@ def user_profile(user_id: int, blocked: bool) -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.row(
         InlineKeyboardButton(text="✉️ Message", callback_data=f"adm:u:dm:{user_id}"),
-        InlineKeyboardButton(text="♻️ Reset", callback_data=f"adm:u:reset:{user_id}"),
+        InlineKeyboardButton(text="♻️ Reset", callback_data=f"adm:u:rstc:{user_id}"),
     )
     if blocked:
         kb.row(InlineKeyboardButton(text="✅ Unban", callback_data=f"adm:mod:unban:{user_id}"))
@@ -102,6 +102,14 @@ def cancel_only(back: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="✕ Cancel", callback_data=f"adm:{back}")]
     ])
+
+
+def confirm_action(confirm_cb: str, back: str, label: str = "✅ Confirm") -> InlineKeyboardMarkup:
+    """Destruktiv amal uchun tasdiqlash: [label → confirm_cb] [✕ Cancel → adm:{back}]."""
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text=label, callback_data=confirm_cb),
+        InlineKeyboardButton(text="✕ Cancel", callback_data=f"adm:{back}"),
+    ]])
 
 
 # ────────────────────────────── Broadcast ───────────────────────────────────
@@ -186,7 +194,7 @@ def database_panel() -> InlineKeyboardMarkup:
 
 def music_panel() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
-    kb.row(InlineKeyboardButton(text="🗑 Clear metadata cache", callback_data="adm:music:clearfeat"))
+    kb.row(InlineKeyboardButton(text="🗑 Clear metadata cache", callback_data="adm:music:clearc"))
     kb.row(*_nav())
     return kb.as_markup()
 
@@ -215,7 +223,7 @@ def system_panel(admins_rows, can_manage: bool) -> InlineKeyboardMarkup:
         for r in admins_rows:
             kb.button(
                 text=f"{roles.ROLE_LABELS.get(r['role'], r['role'])} · {r['user_id']}",
-                callback_data=f"adm:sys:rm:{r['user_id']}",
+                callback_data=f"adm:sys:rmc:{r['user_id']}",
             )
         kb.adjust(1)
         kb.row(InlineKeyboardButton(text="➕ Add admin", callback_data="adm:sys:add"))

@@ -210,20 +210,25 @@ async def active_since(ts: float) -> int:
 
 
 async def iter_active_user_ids(batch: int = 500):
-    """Broadcast uchun: bloklanmagan foydalanuvchi ID'larини oqim tarzида beradi."""
-    offset = 0
+    """Broadcast uchun: bloklanmagan foydalanuvchi ID'larини oqim tarzида beradi.
+
+    Keyset paginatsiya (WHERE id > last) — OFFSET EMAS. 500k+ foydalanuvchiда
+    OFFSET har partiyani qaytadan skanlaydi (O(n²)); keyset PRIMARY KEY bo'ylab
+    O(n) va broadcast davomida yangi/o'chgan qatorlarга barqaror.
+    """
+    last = 0
     while True:
         cur = await db().execute(
-            """SELECT id FROM users WHERE id NOT IN (SELECT user_id FROM bans)
-               ORDER BY id LIMIT ? OFFSET ?""",
-            (batch, offset),
+            """SELECT id FROM users WHERE id > ? AND id NOT IN (SELECT user_id FROM bans)
+               ORDER BY id LIMIT ?""",
+            (last, batch),
         )
         rows = await cur.fetchall()
         if not rows:
             break
         for r in rows:
             yield r["id"]
-        offset += batch
+        last = rows[-1]["id"]
 
 
 async def delete_inactive(days: int) -> int:
@@ -354,6 +359,19 @@ async def update_broadcast(bid: int, **fields) -> None:
         f"UPDATE broadcasts SET {cols} WHERE id=?", (*fields.values(), bid)
     )
     await db().commit()
+
+
+async def reconcile_broadcasts() -> int:
+    """Startupда chaqiriladi: qayta ishga tushishдан oldin tugamagan broadcastlar
+    ('running'/'pending') 'failed' deb belgilanadi — in-memory holat yo'qolgan,
+    aks holda ular abadiy 'running' bo'lib qolar edi."""
+    cur = await db().execute(
+        "UPDATE broadcasts SET status='failed', finished_at=? "
+        "WHERE status IN ('running', 'pending')",
+        (_now(),),
+    )
+    await db().commit()
+    return cur.rowcount
 
 
 async def recent_broadcasts(limit: int = 8) -> list:
