@@ -19,6 +19,8 @@ from aiogram.enums import ContentType
 from aiogram.types import Message
 
 from bot import keyboards, store
+from bot.admin import repo as admin_repo
+from bot.admin import settings_store
 from bot.i18n import Texts
 from bot.services import recognizer, search_engine
 
@@ -51,6 +53,10 @@ def _ext(message: Message) -> str:
 
 @router.message(F.content_type.in_(_SUPPORTED_TYPES))
 async def handle_media(message: Message, t: Texts, bot: Bot) -> None:
+    if not settings_store.feature_enabled("recognize"):
+        await message.answer("🎧 Music recognition is temporarily disabled.")
+        return
+
     file_obj = _file_obj(message)
     if file_obj is None:
         return
@@ -74,8 +80,20 @@ async def handle_media(message: Message, t: Texts, bot: Bot) -> None:
         return
 
     if not result:
+        try:
+            await admin_repo.add_failed("recognize", "unidentified media")
+        except Exception:
+            pass
         await status.edit_text(t.RECOGNIZE_NOT_FOUND)
         return
+
+    try:
+        await admin_repo.bump_song(
+            f"{(result['artist'] or '').strip().lower()} — {(result['title'] or '').strip().lower()}"[:200],
+            result.get("title") or "", result.get("artist") or "", "recognitions",
+        )
+    except Exception:
+        pass
 
     # Find a downloadable version via our multi-source search engine
     query = f"{result['artist']} {result['title']}"

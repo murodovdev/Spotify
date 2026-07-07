@@ -3,13 +3,19 @@ import logging
 import os
 import signal
 import sys
+import time
 
 from aiogram import BaseMiddleware, Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from aiogram.types import BotCommand, ErrorEvent
+from aiogram.types import BotCommand, CallbackQuery, ErrorEvent, Message
 from aiohttp import web
 
+from bot.admin import broadcast as admin_broadcast
+from bot.admin import dashboard as admin_dashboard
+from bot.admin import flows as admin_flows
+from bot.admin import logbuf, settings_store
+from bot.admin import repo as admin_repo
 from bot.config import settings
 from bot.db import maintenance, repo
 from bot.db.database import close_db, init_db
@@ -51,6 +57,8 @@ def _setup_logging() -> None:
     logging.basicConfig(level=logging.INFO, format=fmt, stream=sys.stdout)
     logging.getLogger("aiogram").setLevel(logging.WARNING)
     logging.getLogger("aiohttp").setLevel(logging.WARNING)
+    # Admin Logs bo'limi uchun so'nggi WARNING/ERROR yozuvlarini xotirada saqlaymiz.
+    logbuf.install(logging.WARNING)
 
 
 class UserMiddleware(BaseMiddleware):
@@ -58,15 +66,61 @@ class UserMiddleware(BaseMiddleware):
         user = data.get("event_from_user")
         if user:
             await repo.upsert_user(user.id, user.username, user.first_name)
+            await repo.bump_active(user.id, time.time())
             lang = await repo.get_lang(user.id)
             data["lang"] = lang
-            data["t"] = get_texts(lang)
+            t = get_texts(lang)
+            data["t"] = t
+
+            # Ban enforcement (arzon — in-memory kesh).
+            blocked, reason = admin_repo.cached_block(user.id)
+            if reason == "__expired__":
+                await admin_repo.unban(user.id)  # muddati o'tган suspend
+                blocked = False
+            if blocked:
+                await _notify_blocked(event, reason)
+                return  # handlerни ishga tushirmaymiz
+
+            # Maintenance rejimi — faqat adminlar o'tadi.
+            if settings_store.is_maintenance():
+                role = await admin_repo.get_role(user.id)
+                if role is None:
+                    await _notify_maintenance(event)
+                    return
         return await handler(event, data)
+
+
+async def _notify_blocked(event, reason: str | None) -> None:
+    text = "🚫 You are blocked from using this bot."
+    if reason:
+        text += f"\nReason: {reason}"
+    try:
+        if isinstance(event, CallbackQuery):
+            await event.answer(text, show_alert=True)
+        elif isinstance(event, Message):
+            await event.answer(text)
+    except Exception:
+        pass
+
+
+async def _notify_maintenance(event) -> None:
+    text = settings_store.get("maintenance_msg")
+    try:
+        if isinstance(event, CallbackQuery):
+            await event.answer(text, show_alert=True)
+        elif isinstance(event, Message):
+            await event.answer(text)
+    except Exception:
+        pass
 
 
 async def main() -> None:
     _setup_logging()
     await init_db(settings.database_path)
+    # Admin tizimi: sozlamalar keshi va ban keshini yuklaymiz.
+    await settings_store.load()
+    await admin_repo.load_bans()
+    await admin_repo.load_admins()
     # Oldingi ishga tushishdan qolgan orphan temp fayllarni tozalaymiz (crash/deploy).
     removed = tempsweep.sweep(max_age=0)
     if removed:
@@ -86,6 +140,11 @@ async def main() -> None:
         log.exception("Unhandled error: %s", event.exception)
 
     dp.include_routers(
+        # Admin panel — oddiy handlerlardан oldin (FSM state handlerlari va /admin
+        # ustuvor bo'lishi uchun; barcha admin handlerlari AdminFilter bilan himoyalangan).
+        admin_dashboard.router,
+        admin_flows.router,
+        admin_broadcast.router,
         start.router,
         library.router,
         favorites.router,

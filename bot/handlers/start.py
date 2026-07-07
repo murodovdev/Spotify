@@ -5,6 +5,7 @@ from aiogram.filters import Command, CommandStart
 from aiogram.types import CallbackQuery, Message
 
 from bot import keyboards
+from bot.admin import settings_store
 from bot.db import repo
 from bot.i18n import LANG_LABELS, WELCOME_BANNER, Texts, get_texts
 
@@ -14,7 +15,16 @@ router = Router(name="start")
 
 def _welcome(t: Texts, first_name: str | None) -> str:
     name = html.escape((first_name or "").strip()) or "🎧"
-    return t.WELCOME.format(name=name)
+    override = settings_store.get("welcome_override")
+    template = override if override else t.WELCOME
+    try:
+        text = template.format(name=name)
+    except (KeyError, IndexError, ValueError):
+        text = template  # admin matni format placeholderсиз bo'lishi mumkin
+    announcement = settings_store.get("announcement")
+    if announcement:
+        text = f"{text}\n\n📣 {html.escape(announcement)}"
+    return text
 
 
 @router.message(CommandStart())

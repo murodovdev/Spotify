@@ -14,12 +14,22 @@ def _evict(user_id: int) -> None:
     _user_cache.pop(user_id, None)
 
 
+def invalidate(user_id: int) -> None:
+    """Foydalanuvchi keshini bekor qiladi (admin reset'дан keyin)."""
+    _user_cache.pop(user_id, None)
+
+
 async def _mark_dirty() -> None:
     global _dirty, _last_flush
     _dirty = True
     now = time.monotonic()
     if now - _last_flush >= _FLUSH_INTERVAL:
         await flush()
+
+
+async def mark_dirty() -> None:
+    """Ommaviy: keyingi flush intervalида commit qilinishi uchun belgilaydi."""
+    await _mark_dirty()
 
 
 async def flush() -> None:
@@ -74,6 +84,23 @@ async def upsert_user(user_id: int, username: str | None, first_name: str | None
     entry["_exists"] = True
     entry["username"] = username
     entry["first_name"] = first_name
+    await _mark_dirty()
+
+
+# last_active tejamkor yangilash: har foydalanuvchiга eng ko'p _ACTIVE_THROTTLE
+# soniyada bir marta (aks holda har xabar bitta yozuvni keltirib chiqarardi).
+_active_touch: dict[int, float] = {}
+_ACTIVE_THROTTLE = 300.0
+
+
+async def bump_active(user_id: int, ts: float) -> None:
+    last = _active_touch.get(user_id, 0.0)
+    if ts - last < _ACTIVE_THROTTLE:
+        return
+    if len(_active_touch) >= _CACHE_MAX:
+        _active_touch.clear()
+    _active_touch[user_id] = ts
+    await db().execute("UPDATE users SET last_active=? WHERE id=?", (ts, user_id))
     await _mark_dirty()
 
 

@@ -12,6 +12,7 @@ from aiogram.exceptions import TelegramBadRequest, TelegramRetryAfter
 from aiogram.types import FSInputFile, Message
 
 from bot import keyboards, store
+from bot.admin import repo as admin_repo
 from bot.db import repo
 from bot.i18n import Texts, progress_bar, track_caption
 from bot.services import downloader
@@ -41,6 +42,21 @@ class TaskManager:
 
 
 manager = TaskManager()
+
+
+def _song_key(track: Track) -> str:
+    return f"{(track.artists or '').strip().lower()} — {(track.title or '').strip().lower()}"[:200]
+
+
+async def _record_download(track: Track) -> None:
+    """Analitika uchun: kunlik hisoblagich + qo'shiq statistikasi (hech qachon fail bermaydi)."""
+    try:
+        await admin_repo.incr_daily("downloads")
+        await admin_repo.bump_song(
+            _song_key(track), track.title or "", track.artists or "", "downloads"
+        )
+    except Exception:
+        log.debug("download stat yozib bo'lmadi", exc_info=True)
 
 
 async def _retrying(fn):
@@ -156,6 +172,7 @@ async def process_single(bot: Bot, chat_id: int, user_id: int, track_id: str, t:
                     )
             await repo.incr("downloads")
 
+        await _record_download(track)
         await status.delete()
     except TrackNotFound:
         await _safe_edit(status, t.ERR_NOT_FOUND.format(name=html.escape(track.full_name)))
@@ -240,6 +257,7 @@ async def process_collection(
                         try:
                             await _send_cached(bot, chat_id, user_id, payload, track, t)
                             await repo.incr("cache_hits")
+                            await _record_download(track)
                             sent += 1
                         except Exception:
                             log.exception("Keshdan yuborishda xato: %s", track.full_name)
@@ -255,6 +273,7 @@ async def process_collection(
                                     track.title, track.artists,
                                 )
                             await repo.incr("downloads")
+                            await _record_download(track)
                             sent += 1
                         except Exception:
                             log.exception("Faylni yuborishda xato: %s", track.full_name)

@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 
 # Sxema versiyasi. Yangi migratsiya qo'shsangiz oshiring va _migrate() ga bosqich
 # qo'shing.
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 # Yangi o'rnatishlar uchun yakuniy sxema (idempotent). Eski bazalar _migrate()
 # orqali shu holatga keltiriladi.
@@ -29,8 +29,10 @@ CREATE TABLE IF NOT EXISTS users(
     first_name  TEXT,
     quality     TEXT NOT NULL DEFAULT '320',
     lang        TEXT,
-    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+    last_active REAL NOT NULL DEFAULT 0
 );
+CREATE INDEX IF NOT EXISTS idx_users_last_active ON users(last_active);
 
 -- Yuklab olingan audio uchun Telegram file_id keshi. last_used LRU eviction
 -- uchun (background maintenance eng kam ishlatilganini o'chiradi).
@@ -85,6 +87,97 @@ CREATE TABLE IF NOT EXISTS rec_shown(
     PRIMARY KEY (user_id, seed_key, track_key)
 );
 CREATE INDEX IF NOT EXISTS idx_rec_shown_time ON rec_shown(shown_at);
+
+-- ────────────────────────────────────────────────────────────────────────
+-- Admin boshqaruv tizimi (v3)
+-- ────────────────────────────────────────────────────────────────────────
+
+-- Foydalanuvchi faolligi: active-users hisoblari uchun (last_active indeksli).
+-- users.last_active ustuni migratsiyada ALTER bilan qo'shiladi (eski baza uchun),
+-- fresh bazada esa quyida CREATE TABLE users ichida bo'lishi kerak — lekin users
+-- yuqorida e'lon qilingan, shu sabab bu yerda faqat indeks (ustunни _migrate ham,
+-- fresh uchun esa quyidagi ALTER-guard beradi).
+
+-- Admin rollari: super | admin | moderator. config.admin_id doim super hisoblanadi.
+CREATE TABLE IF NOT EXISTS admins(
+    user_id   INTEGER PRIMARY KEY,
+    role      TEXT NOT NULL DEFAULT 'admin',
+    added_by  INTEGER,
+    added_at  REAL NOT NULL DEFAULT 0
+);
+
+-- Bloklash / vaqtincha to'xtatish. until=0 → doimiy.
+CREATE TABLE IF NOT EXISTS bans(
+    user_id  INTEGER PRIMARY KEY,
+    kind     TEXT NOT NULL DEFAULT 'ban',   -- ban | suspend
+    reason   TEXT,
+    until    REAL NOT NULL DEFAULT 0,
+    by       INTEGER,
+    at       REAL NOT NULL DEFAULT 0
+);
+
+-- Botni Telegram orqali sozlash (feature flag, maintenance, limitlar, welcome…).
+CREATE TABLE IF NOT EXISTS bot_settings(
+    key    TEXT PRIMARY KEY,
+    value  TEXT
+);
+
+-- Har bir sezgir admin amali uchun audit izi.
+CREATE TABLE IF NOT EXISTS audit_log(
+    id        INTEGER PRIMARY KEY AUTOINCREMENT,
+    admin_id  INTEGER NOT NULL,
+    action    TEXT NOT NULL,
+    target    TEXT,
+    detail    TEXT,
+    at        REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_audit_at ON audit_log(at DESC);
+
+-- Kunlik hisoblagichlar (bugun/hafta/oy analitikasi). day = 'YYYY-MM-DD' (UTC).
+CREATE TABLE IF NOT EXISTS daily_counters(
+    day    TEXT NOT NULL,
+    key    TEXT NOT NULL,
+    value  INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (day, key)
+);
+CREATE INDEX IF NOT EXISTS idx_daily_counters_key ON daily_counters(key, day);
+
+-- Qo'shiq darajasidagi statistika: eng ko'p yuklab olingan / qidirilgan / tanilgan.
+CREATE TABLE IF NOT EXISTS song_stats(
+    key           TEXT PRIMARY KEY,   -- normallashgan "artist — title"
+    title         TEXT,
+    artist        TEXT,
+    downloads     INTEGER NOT NULL DEFAULT 0,
+    searches      INTEGER NOT NULL DEFAULT 0,
+    recognitions  INTEGER NOT NULL DEFAULT 0,
+    updated_at    REAL NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_song_stats_dl ON song_stats(downloads DESC);
+CREATE INDEX IF NOT EXISTS idx_song_stats_sr ON song_stats(searches DESC);
+CREATE INDEX IF NOT EXISTS idx_song_stats_rc ON song_stats(recognitions DESC);
+
+-- Muvaffaqiyatsiz qidiruv / tanish (music management uchun).
+CREATE TABLE IF NOT EXISTS failed_events(
+    id     INTEGER PRIMARY KEY AUTOINCREMENT,
+    kind   TEXT NOT NULL,     -- search | recognize
+    query  TEXT,
+    at     REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_failed_events_at ON failed_events(kind, at DESC);
+
+-- Broadcast tarixi va yetkazib berish statistikasi.
+CREATE TABLE IF NOT EXISTS broadcasts(
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    admin_id      INTEGER,
+    kind          TEXT,
+    status        TEXT NOT NULL DEFAULT 'pending', -- pending|running|done|cancelled|failed
+    total         INTEGER NOT NULL DEFAULT 0,
+    sent          INTEGER NOT NULL DEFAULT 0,
+    failed        INTEGER NOT NULL DEFAULT 0,
+    scheduled_at  REAL NOT NULL DEFAULT 0,
+    created_at    REAL NOT NULL,
+    finished_at   REAL NOT NULL DEFAULT 0
+);
 """
 
 _db: aiosqlite.Connection | None = None
@@ -118,6 +211,18 @@ async def _migrate() -> None:
             "CREATE INDEX IF NOT EXISTS idx_track_cache_last_used ON track_cache(last_used)"
         )
         await _db.execute("DROP TABLE IF EXISTS history")
+
+    if version < 3:
+        # v3: admin boshqaruv tizimi. Yangi jadvallar BASE_SCHEMA (CREATE IF NOT
+        # EXISTS) orqali allaqachon yaratildi; bu yerda faqat mavjud users
+        # jadvaliga last_active ustunini qo'shamiz.
+        if not await _column_exists("users", "last_active"):
+            await _db.execute(
+                "ALTER TABLE users ADD COLUMN last_active REAL NOT NULL DEFAULT 0"
+            )
+        await _db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_users_last_active ON users(last_active)"
+        )
 
     await _db.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
     await _db.commit()

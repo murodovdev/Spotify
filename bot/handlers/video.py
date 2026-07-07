@@ -17,6 +17,7 @@ from aiogram import Bot, F, Router
 from aiogram.types import CallbackQuery, FSInputFile, Message
 
 from bot import keyboards, store
+from bot.admin import settings_store
 from bot.i18n import Texts
 from bot.services import recognizer, search_engine, video_dl
 
@@ -46,6 +47,9 @@ def _has_video_url(text: str) -> bool:
 async def handle_video_link(message: Message, t: Texts, bot: Bot) -> None:
     pair = video_dl.extract_video_url(message.text or "")
     if not pair:
+        return
+    if not settings_store.feature_enabled("video"):
+        await message.answer("🎬 Video download is temporarily disabled.")
         return
 
     url, platform = pair
