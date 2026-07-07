@@ -15,7 +15,7 @@ from mutagen.id3 import APIC, ID3, TALB, TDRC, TIT2, TPE1, TRCK
 from mutagen.id3._util import ID3NoHeaderError
 from yt_dlp import YoutubeDL
 
-from bot.services import matcher
+from bot.services import matcher, ytdlp_common
 from bot.services.spotify import Track, spotify
 
 log = logging.getLogger(__name__)
@@ -73,11 +73,10 @@ def _ydl_download(video_id: str, tmpdir: str, bitrate: str) -> str:
         "noplaylist": True,
         "retries": 3,
         "socket_timeout": 20,
-        # YouTube standart `web` klientini IP bo'yicha bloklaydi → audio yuklashda
-        # 403 Forbidden. `android` klienti boshqa API orqali cheklanmagan URL beradi;
-        # `web_safari` — zaxira. (`source_address: 0.0.0.0` 403 keltirib chiqargani uchun olib tashlandi.)
-        "extractor_args": {"youtube": {"player_client": ["android", "web_safari"]}},
     }
+    # Cookie + chidamli player_client — data-markaz IP'lardagi "bot" tekshiruvi
+    # va yosh-cheklovini chetlab o'tish uchun (bot/services/ytdlp_common.py).
+    ytdlp_common.apply(opts)
     ffmpeg_loc = _ffmpeg_location()
     if ffmpeg_loc:
         opts["ffmpeg_location"] = ffmpeg_loc
