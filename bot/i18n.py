@@ -163,14 +163,16 @@ class Texts:
 
 UZ = Texts(
     WELCOME=(
-        "🎵 <b>TrackFlow</b>\n"
-        "━━━━━━━━━━━━━━━━━━━━\n\n"
-        "Salom, <b>{name}</b>! 👋\n\n"
-        "Spotify'dagi istalgan <b>qo'shiq</b>, <b>albom</b> yoki "
-        "<b>playlist</b>ni MP3 formatida yuklab bering.\n\n"
-        "🔗 Spotify havolasini yuboring\n"
-        "🔍 yoki qo'shiq nomini yozing\n\n"
-        "<i>Masalan:</i> <code>The Weeknd Blinding Lights</code>"
+        "🎵 <b>TrackFlow</b>\n\n"
+        "Salom, {name}! 👋\n\n"
+        "Spotify havolasi, qo'shiq nomi yoki video, audio va ovozli xabar "
+        "yuboring — TrackFlow musiqani topib, bir necha soniya ichida yuboradi.\n\n"
+        "<b>✨ Imkoniyatlar:</b>\n"
+        "• 🎵 Qo'shiq, albom va playlist\n"
+        "• 🔍 Video, audio va ovozli xabardan musiqani aniqlash\n"
+        "• 🎧 Yuqori sifatli audio\n"
+        "• 🎚 Audio effektlar va metadata tahrirlash\n\n"
+        "🚀 Boshlash uchun Spotify havolasini yoki musiqa nomini yuboring."
     ),
     HELP=(
         "📖 <b>Qo'llanma</b>\n"
@@ -427,14 +429,16 @@ UZ = Texts(
 
 EN = Texts(
     WELCOME=(
-        "🎵 <b>TrackFlow</b>\n"
-        "━━━━━━━━━━━━━━━━━━━━\n\n"
-        "Hi, <b>{name}</b>! 👋\n\n"
-        "Download any Spotify <b>song</b>, <b>album</b> or "
-        "<b>playlist</b> as MP3.\n\n"
-        "🔗 Send a Spotify link\n"
-        "🔍 or type a song name\n\n"
-        "<i>Example:</i> <code>The Weeknd Blinding Lights</code>"
+        "🎵 <b>TrackFlow</b>\n\n"
+        "Hi, {name}! 👋\n\n"
+        "Send a Spotify link, a song name, or a video, audio or voice message "
+        "— TrackFlow finds the music and delivers it in seconds.\n\n"
+        "<b>✨ What you can do:</b>\n"
+        "• 🎵 Songs, albums and playlists\n"
+        "• 🔍 Identify music from video, audio and voice messages\n"
+        "• 🎧 High-quality audio\n"
+        "• 🎚 Audio effects and metadata editing\n\n"
+        "🚀 To get started, send a Spotify link or a song name."
     ),
     HELP=(
         "📖 <b>How it works</b>\n"
@@ -691,14 +695,17 @@ EN = Texts(
 
 RU = Texts(
     WELCOME=(
-        "🎵 <b>TrackFlow</b>\n"
-        "━━━━━━━━━━━━━━━━━━━━\n\n"
-        "Привет, <b>{name}</b>! 👋\n\n"
-        "Скачивайте любой <b>трек</b>, <b>альбом</b> или "
-        "<b>плейлист</b> из Spotify в MP3.\n\n"
-        "🔗 Пришлите ссылку Spotify\n"
-        "🔍 или напишите название песни\n\n"
-        "<i>Например:</i> <code>The Weeknd Blinding Lights</code>"
+        "🎵 <b>TrackFlow</b>\n\n"
+        "Привет, {name}! 👋\n\n"
+        "Отправьте ссылку Spotify, название песни или видео, аудио либо "
+        "голосовое сообщение — TrackFlow найдёт музыку и пришлёт её за "
+        "несколько секунд.\n\n"
+        "<b>✨ Возможности:</b>\n"
+        "• 🎵 Песни, альбомы и плейлисты\n"
+        "• 🔍 Распознавание музыки из видео, аудио и голосовых\n"
+        "• 🎧 Аудио высокого качества\n"
+        "• 🎚 Аудиоэффекты и редактирование метаданных\n\n"
+        "🚀 Чтобы начать, отправьте ссылку Spotify или название песни."
     ),
     HELP=(
         "📖 <b>Как работает?</b>\n"
