@@ -463,7 +463,6 @@ async def meta_text_received(message: Message, t: Texts, state: FSMContext, bot:
             )
 
         await status.delete()
-        await repo.add_history(message.from_user.id, track_id, updated.title, updated.artists)
 
     except Exception:
         log.exception("Metadata text update error: %s", track_id)
@@ -526,7 +525,6 @@ async def meta_photo_received(message: Message, t: Texts, state: FSMContext, bot
             )
 
         await status.delete()
-        await repo.add_history(message.from_user.id, track_id, track.title, track.artists)
 
     except Exception:
         log.exception("Metadata cover update error: %s", track_id)

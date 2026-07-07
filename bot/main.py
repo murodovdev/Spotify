@@ -11,7 +11,7 @@ from aiogram.types import BotCommand, ErrorEvent
 from aiohttp import web
 
 from bot.config import settings
-from bot.db import repo
+from bot.db import maintenance, repo
 from bot.db.database import close_db, init_db
 from bot.handlers import (
     favorites,
@@ -65,7 +65,7 @@ class UserMiddleware(BaseMiddleware):
 
 async def main() -> None:
     _setup_logging()
-    await init_db(settings.db_path)
+    await init_db(settings.database_path)
 
     bot = Bot(
         settings.bot_token,
@@ -126,6 +126,7 @@ async def main() -> None:
         await bot.delete_webhook(drop_pending_updates=True)
         log.info("Bot ishga tushdi (polling)")
         polling_task = asyncio.create_task(dp.start_polling(bot))
+        maintenance_task = asyncio.create_task(maintenance.loop())
         shutdown_task = asyncio.create_task(shutdown_event.wait())
         done, _ = await asyncio.wait(
             [polling_task, shutdown_task], return_when=asyncio.FIRST_COMPLETED
@@ -133,6 +134,7 @@ async def main() -> None:
         if shutdown_task in done:
             await dp.stop_polling()
             polling_task.cancel()
+        maintenance_task.cancel()
     finally:
         log.info("Shutting down…")
         await runner.cleanup()

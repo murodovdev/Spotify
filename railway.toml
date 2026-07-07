@@ -4,6 +4,10 @@ builder = "dockerfile"
 [deploy]
 restartPolicyType = "always"
 healthcheckPath = "/health"
-# Railway default: 300s — yetarli, maxsus qiymat kerak emas.
-# Railway UI'da Volume yarating va /data ga mount qiling,
-# so'ng DB_PATH=/data/bot.db env o'zgaruvchisini qo'shing.
+numReplicas = 1
+# ⚠️  PERSISTENCE — MAJBURIY:
+# Railway UI → Service → Variables → "Add Volume", mount path = /data
+# Kod DB_PATH bo'sh bo'lsa avtomat /data/bot.db ishlatadi (config.database_path).
+# Volume BO'LMASA har redeploy'da barcha foydalanuvchi ma'lumoti yo'qoladi.
+# numReplicas 1 bo'lishi shart: (a) volume faqat bitta instance'ga ulanadi,
+# (b) polling'da 2 instance TelegramConflictError beradi.
