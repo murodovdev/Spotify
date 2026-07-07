@@ -158,12 +158,18 @@ def post_download_kb(track, t: Texts, is_fav: bool = False) -> InlineKeyboardMar
     """Full interactive keyboard shown after single-track download."""
     kb = InlineKeyboardBuilder()
 
-    # Row 1: Share (inline mode) + Save to Favorites
+    # Row 1: Share (native chat picker) + Save to Favorites
     share_query = store.stash_share(track)
     kb.row(
         InlineKeyboardButton(
             text=t.BTN_SHARE,
-            switch_inline_query=share_query,
+            switch_inline_query_chosen_chat=SwitchInlineQueryChosenChat(
+                query=share_query,
+                allow_user_chats=True,
+                allow_group_chats=True,
+                allow_channel_chats=True,
+                allow_bot_chats=False,
+            ),
         ),
         InlineKeyboardButton(
             text=t.BTN_FAV_SAVED if is_fav else t.BTN_FAV_ADD,
@@ -239,13 +245,19 @@ def recognize_result_kb(track, t: Texts) -> InlineKeyboardMarkup:
         InlineKeyboardButton(text=t.BTN_RECOGNIZE_DL, callback_data=f"dl:t:{track.id}"),
         InlineKeyboardButton(text=t.BTN_FAV_ADD, callback_data=f"fav:{track.id}"),
     )
-    # Row 2: Similar Songs + Share
+    # Row 2: Similar Songs + Share (native chat picker)
     share_query = store.stash_share(track)
     kb.row(
         InlineKeyboardButton(text=t.BTN_SIMILAR, callback_data=f"sim:{track.id}"),
         InlineKeyboardButton(
             text=t.BTN_SHARE,
-            switch_inline_query=share_query,
+            switch_inline_query_chosen_chat=SwitchInlineQueryChosenChat(
+                query=share_query,
+                allow_user_chats=True,
+                allow_group_chats=True,
+                allow_channel_chats=True,
+                allow_bot_chats=False,
+            ),
         ),
     )
     return kb.as_markup()
