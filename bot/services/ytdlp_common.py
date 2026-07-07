@@ -21,11 +21,14 @@ import tempfile
 
 log = logging.getLogger(__name__)
 
-# Cookie mavjud bo'lsa `web` klienti ularni to'liq ishlatadi. Aks holda `web`/
-# `android` PO token talab qiladi va tez-tez "bot" tekshiruviga tushadi; `tv` va
-# `mweb` esa hozircha token'siz ham cheklanmagan URL beradi.
-_CLIENTS_WITH_COOKIES = ["web", "tv", "mweb"]
-_CLIENTS_NO_COOKIES = ["tv", "mweb", "web_safari"]
+# Klient tanlash format ro'yxatiga ta'sir qiladi. `web`/`mweb` PO token talab
+# qiladi va token'siz formatlarni "mavjud emas" deb belgilaydi ("Requested
+# format is not available"). `web_safari` cookie bilan to'liq format beradi va
+# yosh-cheklovini ochadi; `android`/`tv` — zaxira, ular ham progressiv format
+# beradi. Cookie "bot" tekshiruvini hал qiladi, shuning uchun cookie bo'lsa
+# bloklanadigan klientlarни ham ishlatsa bo'ladi.
+_CLIENTS_WITH_COOKIES = ["web_safari", "android", "tv"]
+_CLIENTS_NO_COOKIES = ["web_safari", "tv", "mweb"]
 
 _cookie_path: str | None = None
 _cookie_resolved = False
