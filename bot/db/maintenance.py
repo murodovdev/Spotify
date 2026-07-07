@@ -11,6 +11,7 @@ import os
 import time
 
 from bot.db.database import db, db_path
+from bot.services import tempsweep
 
 log = logging.getLogger(__name__)
 
@@ -70,17 +71,23 @@ async def run_once() -> None:
         await db().execute("PRAGMA wal_checkpoint(TRUNCATE)")
         await db().commit()
 
+        # Orphan temp fayllarni supuramiz (yarim yuklab olishlar, interrupt).
+        swept = tempsweep.sweep()
+
         size_mb = _db_size_mb()
+        free_mb = tempsweep.disk_free_mb()
         took = time.monotonic() - started
         log.info(
-            "DB maintenance: %.1f MB | evicted track_cache=%d rec_features=%d "
-            "rec_shown=%d | %.2fs",
-            size_mb, evicted_tc, evicted_rf, evicted_rs, took,
+            "Maintenance: DB %.1f MB | disk free %.0f MB | evicted track_cache=%d "
+            "rec_features=%d rec_shown=%d | temp orphan=%d | %.2fs",
+            size_mb, free_mb, evicted_tc, evicted_rf, evicted_rs, swept, took,
         )
         if size_mb > 4096:  # 5 GB limitга yaqinlashuv
             log.warning("⚠️  DB hajmi %.0f MB — 5 GB limitга yaqin, cheklovlarни ko'rib chiqing", size_mb)
+        if 0 <= free_mb < 512:
+            log.warning("⚠️  Disk bo'sh joyi %.0f MB — kam qoldi", free_mb)
     except Exception:
-        log.exception("DB maintenance xatosi")
+        log.exception("Maintenance xatosi")
 
 
 async def loop() -> None:

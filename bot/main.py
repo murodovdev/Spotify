@@ -27,6 +27,7 @@ from bot.handlers import (
     youtube,
 )
 from bot.i18n import get_texts
+from bot.services import tempsweep
 from bot.services.spotify import spotify
 from bot.web.oauth import build_app
 
@@ -66,6 +67,10 @@ class UserMiddleware(BaseMiddleware):
 async def main() -> None:
     _setup_logging()
     await init_db(settings.database_path)
+    # Oldingi ishga tushishdan qolgan orphan temp fayllarni tozalaymiz (crash/deploy).
+    removed = tempsweep.sweep(max_age=0)
+    if removed:
+        log.info("Startup temp tozalash: %d orphan o'chirildi", removed)
 
     bot = Bot(
         settings.bot_token,

@@ -214,73 +214,86 @@ async def process_collection(
                 tmp.cleanup()
                 return "error", None
 
-    tasks = [asyncio.create_task(prepare(tr)) for tr in tracks]
-    sent = failed = consumed = 0
+    # Disk backpressure: bir vaqtда faqat WINDOW ta yuklab olingan fayl diskда
+    # turadi. Aks holda uzun playlistда tugagan MP3'lar (har biri ~49MB) navbat
+    # bilan yuborilguncha to'planib 5GB diskни to'ldiradi. Har oyna ketma-ket
+    # yuboriladi va tozalanadi, so'ng keyingisi yuklanadi.
+    WINDOW = PARALLEL_PER_USER
+    sent = failed = done = 0
     failed_names: list[str] = []
     last_edit = 0.0
 
     try:
-        for i, (track, task) in enumerate(zip(tracks, tasks), start=1):
+        for start in range(0, total, WINDOW):
             if job.cancelled:
                 break
-            kind, payload = await task
-            consumed = i
+            batch = tracks[start:start + WINDOW]
+            prep = [asyncio.create_task(prepare(tr)) for tr in batch]
+            try:
+                for track, task in zip(batch, prep):
+                    if job.cancelled:
+                        break
+                    kind, payload = await task
+                    done += 1
 
-            if kind == "cached":
-                try:
-                    await _send_cached(bot, chat_id, user_id, payload, track, t)
-                    await repo.incr("cache_hits")
-                    sent += 1
-                except Exception:
-                    log.exception("Keshdan yuborishda xato: %s", track.full_name)
-                    failed += 1
-                    failed_names.append(html.escape(track.full_name))
-            elif kind == "file":
-                tmp, res = payload
-                try:
-                    msg = await _send_file(bot, chat_id, user_id, res, track, t)
-                    if msg.audio:
-                        await repo.cache_put(
-                            track.id, bitrate, msg.audio.file_id,
-                            track.title, track.artists,
+                    if kind == "cached":
+                        try:
+                            await _send_cached(bot, chat_id, user_id, payload, track, t)
+                            await repo.incr("cache_hits")
+                            sent += 1
+                        except Exception:
+                            log.exception("Keshdan yuborishda xato: %s", track.full_name)
+                            failed += 1
+                            failed_names.append(html.escape(track.full_name))
+                    elif kind == "file":
+                        tmp, res = payload
+                        try:
+                            msg = await _send_file(bot, chat_id, user_id, res, track, t)
+                            if msg.audio:
+                                await repo.cache_put(
+                                    track.id, bitrate, msg.audio.file_id,
+                                    track.title, track.artists,
+                                )
+                            await repo.incr("downloads")
+                            sent += 1
+                        except Exception:
+                            log.exception("Faylni yuborishda xato: %s", track.full_name)
+                            failed += 1
+                            failed_names.append(html.escape(track.full_name))
+                        finally:
+                            tmp.cleanup()
+                    elif kind == "skip":
+                        continue
+                    else:
+                        failed += 1
+                        failed_names.append(html.escape(track.full_name))
+
+                    now = time.monotonic()
+                    if now - last_edit > 2.5 or done == total:
+                        await _safe_edit(
+                            status,
+                            t.PROGRESS.format(
+                                title=title, bar=progress_bar(done, total),
+                                done=done, total=total, sent=sent, failed=failed,
+                            ),
+                            reply_markup=keyboards.cancel_button(user_id, t),
                         )
-                    await repo.incr("downloads")
-                    sent += 1
-                except Exception:
-                    log.exception("Faylni yuborishda xato: %s", track.full_name)
-                    failed += 1
-                    failed_names.append(html.escape(track.full_name))
-                finally:
-                    tmp.cleanup()
-            elif kind == "skip":
-                continue
-            else:
-                failed += 1
-                failed_names.append(html.escape(track.full_name))
-
-            now = time.monotonic()
-            if now - last_edit > 2.5 or i == total:
-                await _safe_edit(
-                    status,
-                    t.PROGRESS.format(
-                        title=title, bar=progress_bar(i, total),
-                        done=i, total=total, sent=sent, failed=failed,
-                    ),
-                    reply_markup=keyboards.cancel_button(user_id, t),
-                )
-                last_edit = now
-            await asyncio.sleep(0.3)
+                        last_edit = now
+                    await asyncio.sleep(0.3)
+            finally:
+                # Iste'mol qilinmagan tasklarni (cancel/break) tozalaymiz —
+                # tugaganlarning temp papkasini o'chiramiz, qolganini bekor.
+                for task in prep:
+                    if not task.done():
+                        task.cancel()
+                    else:
+                        try:
+                            k, p = task.result()
+                            if k == "file":
+                                p[0].cleanup()
+                        except Exception:
+                            pass
     finally:
-        for task in tasks[consumed:]:
-            if not task.done():
-                task.cancel()
-            else:
-                try:
-                    kind, payload = task.result()
-                    if kind == "file":
-                        payload[0].cleanup()
-                except Exception:
-                    pass
         manager.active.pop(user_id, None)
 
     if job.cancelled:
