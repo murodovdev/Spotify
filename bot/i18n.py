@@ -141,6 +141,21 @@ class Texts:
     YT_PLAYLIST_EMPTY: str
     YT_PLAYLIST_HINT: str
 
+    # --- YouTube: format tanlash ---
+    YT_FETCHING: str
+    YT_CHOOSE_FORMAT: str
+    YT_PREPARING: str
+    BTN_YT_MP3: str
+    BTN_YT_M4A: str
+    BTN_YT_FLAC: str
+    BTN_YT_OPUS: str
+    YT_ERR_PRIVATE: str
+    YT_ERR_DELETED: str
+    YT_ERR_GEO: str
+    YT_ERR_LIVE: str
+    YT_ERR_AGE: str
+    YT_ERR_NETWORK: str
+
     # --- Video download ---
     VIDEO_DOWNLOADING: str
     VIDEO_TOO_LARGE: str
@@ -182,7 +197,7 @@ UZ = Texts(
         "🔍 <b>Qidiruv orqali</b>\n"
         "Qo'shiq nomini yozing — natijalardan tanlang.\n\n"
         "▶️ <b>YouTube havolasi</b>\n"
-        "Video yoki playlist havolasini yuboring — audio ajratib beriladi.\n\n"
+        "Video havolasini yuboring — format tanlang (MP3, M4A, FLAC, OPUS). Playlist ham qo'llab-quvvatlanadi.\n\n"
         "📹 <b>Ijtimoiy tarmoq videosi</b>\n"
         "Instagram, TikTok, Facebook, X, Pinterest yoki Vimeo havolasi — video yuklanadi, "
         "so'ng 🎵 tugmasi bilan undagi musiqani aniqlash mumkin.\n\n"
@@ -254,6 +269,24 @@ UZ = Texts(
     YT_PLAYLIST_LOADING="📁 <i>Playlist yuklanmoqda…</i>",
     YT_PLAYLIST_EMPTY="📁 Bu playlist bo'sh yoki mavjud emas.",
     YT_PLAYLIST_HINT="Yuklab olish uchun qo'shiqni tanlang",
+
+    YT_FETCHING="▶️ <i>Video ma'lumotlari olinmoqda…</i>",
+    YT_CHOOSE_FORMAT=(
+        "🎬 <b>{title}</b>\n"
+        "👤 {channel}{duration}\n\n"
+        "<i>Yuklab olish formatini tanlang:</i>"
+    ),
+    YT_PREPARING="⏬ <i>{fmt} tayyorlanmoqda…</i>",
+    BTN_YT_MP3="🎵 MP3 (Eng yaxshi)",
+    BTN_YT_M4A="🎧 M4A (Original)",
+    BTN_YT_FLAC="🎼 FLAC (Yo'qotishsiz)",
+    BTN_YT_OPUS="🎙 OPUS (Yuqori sifat)",
+    YT_ERR_PRIVATE="🔒 Bu video maxfiy.",
+    YT_ERR_DELETED="🗑 Bu video o'chirilgan yoki mavjud emas.",
+    YT_ERR_GEO="🌍 Bu video sizning mintaqangizda mavjud emas.",
+    YT_ERR_LIVE="📡 Jonli efirlarni yuklab bo'lmaydi.",
+    YT_ERR_AGE="🔞 Bu videoda yosh cheklovi bor.",
+    YT_ERR_NETWORK="📡 Tarmoq xatosi. Qaytadan urinib ko'ring.",
 
     VIDEO_DOWNLOADING="📥 <i>{platform} yuklanmoqda…</i>",
     VIDEO_TOO_LARGE=(
@@ -457,7 +490,7 @@ EN = Texts(
         "🔍 <b>Via search</b>\n"
         "Type a song name and pick from the results.\n\n"
         "▶️ <b>YouTube link</b>\n"
-        "Send a video or playlist link — the bot extracts the audio.\n\n"
+        "Send a video link and pick a format (MP3, M4A, FLAC, OPUS). Playlists are supported too.\n\n"
         "📹 <b>Social media video</b>\n"
         "Instagram, TikTok, Facebook, X, Pinterest or Vimeo link — the video is downloaded, "
         "then the 🎵 button identifies the music in it.\n\n"
@@ -529,6 +562,24 @@ EN = Texts(
     YT_PLAYLIST_LOADING="📁 <i>Loading playlist…</i>",
     YT_PLAYLIST_EMPTY="📁 This playlist is empty or unavailable.",
     YT_PLAYLIST_HINT="Select a track to download",
+
+    YT_FETCHING="▶️ <i>Fetching video info…</i>",
+    YT_CHOOSE_FORMAT=(
+        "🎬 <b>{title}</b>\n"
+        "👤 {channel}{duration}\n\n"
+        "<i>Choose the download format:</i>"
+    ),
+    YT_PREPARING="⏬ <i>Preparing {fmt}…</i>",
+    BTN_YT_MP3="🎵 MP3 (Best)",
+    BTN_YT_M4A="🎧 M4A (Original)",
+    BTN_YT_FLAC="🎼 FLAC (Lossless)",
+    BTN_YT_OPUS="🎙 OPUS (High Quality)",
+    YT_ERR_PRIVATE="🔒 This video is private.",
+    YT_ERR_DELETED="🗑 This video was deleted or doesn't exist.",
+    YT_ERR_GEO="🌍 This video isn't available in your region.",
+    YT_ERR_LIVE="📡 Live streams can't be downloaded.",
+    YT_ERR_AGE="🔞 This video is age-restricted.",
+    YT_ERR_NETWORK="📡 Network error. Please try again.",
 
     VIDEO_DOWNLOADING="📥 <i>Downloading {platform}…</i>",
     VIDEO_TOO_LARGE=(
@@ -733,7 +784,7 @@ RU = Texts(
         "🔍 <b>По поиску</b>\n"
         "Напишите название песни — выберите из результатов.\n\n"
         "▶️ <b>Ссылка YouTube</b>\n"
-        "Отправьте ссылку на видео или плейлист — бот извлечёт аудио.\n\n"
+        "Отправьте ссылку на видео и выберите формат (MP3, M4A, FLAC, OPUS). Плейлисты тоже поддерживаются.\n\n"
         "📹 <b>Видео из соцсетей</b>\n"
         "Ссылка на Instagram, TikTok, Facebook, X, Pinterest или Vimeo — видео скачается, "
         "а кнопка 🎵 распознает музыку из него.\n\n"
@@ -805,6 +856,24 @@ RU = Texts(
     YT_PLAYLIST_LOADING="📁 <i>Загружаю плейлист…</i>",
     YT_PLAYLIST_EMPTY="📁 Этот плейлист пуст или недоступен.",
     YT_PLAYLIST_HINT="Выберите трек для загрузки",
+
+    YT_FETCHING="▶️ <i>Получаю информацию о видео…</i>",
+    YT_CHOOSE_FORMAT=(
+        "🎬 <b>{title}</b>\n"
+        "👤 {channel}{duration}\n\n"
+        "<i>Выберите формат загрузки:</i>"
+    ),
+    YT_PREPARING="⏬ <i>Готовлю {fmt}…</i>",
+    BTN_YT_MP3="🎵 MP3 (Лучший)",
+    BTN_YT_M4A="🎧 M4A (Оригинал)",
+    BTN_YT_FLAC="🎼 FLAC (Без потерь)",
+    BTN_YT_OPUS="🎙 OPUS (Высокое качество)",
+    YT_ERR_PRIVATE="🔒 Это видео приватное.",
+    YT_ERR_DELETED="🗑 Видео удалено или не существует.",
+    YT_ERR_GEO="🌍 Видео недоступно в вашем регионе.",
+    YT_ERR_LIVE="📡 Прямые трансляции скачать нельзя.",
+    YT_ERR_AGE="🔞 На видео возрастное ограничение.",
+    YT_ERR_NETWORK="📡 Ошибка сети. Попробуйте снова.",
 
     VIDEO_DOWNLOADING="📥 <i>Загружаю {platform}…</i>",
     VIDEO_TOO_LARGE=(

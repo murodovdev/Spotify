@@ -1,8 +1,9 @@
 """YouTube link handler — extracts audio from YouTube videos and playlists.
 
-When a user sends a YouTube URL the bot downloads the audio track (not the
-video) and delivers it with the full post-download UX (Share, Favorites,
-Similar Songs, Audio Effects, Metadata Editor).
+Standard videos show a thumbnail preview with a format picker (MP3 / M4A /
+FLAC / OPUS) and download nothing until the user taps a format. Shorts keep
+the legacy behaviour: the audio is extracted immediately at the user's
+configured bitrate.
 
 Routing: this router must be registered BEFORE video.router so that YouTube
 URLs are handled as audio downloads rather than video downloads.
@@ -13,7 +14,7 @@ import logging
 import tempfile
 
 from aiogram import Bot, F, Router
-from aiogram.types import FSInputFile, Message
+from aiogram.types import CallbackQuery, FSInputFile, Message
 
 from bot import keyboards, store
 from bot.db import repo
@@ -24,6 +25,31 @@ from bot.services.spotify import Track
 
 log = logging.getLogger(__name__)
 router = Router(name="youtube")
+
+# video_dl.YTError.reason → lokalizatsiya kaliti
+_ERR_TEXT = {
+    "private": "YT_ERR_PRIVATE",
+    "deleted": "YT_ERR_DELETED",
+    "geo": "YT_ERR_GEO",
+    "live": "YT_ERR_LIVE",
+    "age": "YT_ERR_AGE",
+    "network": "YT_ERR_NETWORK",
+    "generic": "YT_UNAVAILABLE",
+}
+
+
+# Yuklanayotgan preview xabarlari: (chat_id, message_id)
+_inflight: set[tuple[int, int]] = set()
+
+
+def _err_text(t: Texts, reason: str) -> str:
+    return getattr(t, _ERR_TEXT.get(reason, "YT_UNAVAILABLE"))
+
+
+def _hms(seconds: int) -> str:
+    mins, secs = divmod(seconds, 60)
+    hours, mins = divmod(mins, 60)
+    return f"{hours}:{mins:02d}:{secs:02d}" if hours else f"{mins}:{secs:02d}"
 
 
 def _is_youtube_url(text: str) -> bool:
@@ -83,6 +109,175 @@ async def handle_youtube_link(message: Message, t: Texts, bot: Bot) -> None:
     if not video_id:
         return
 
+    # Shorts — eski oqim (darhol audio). Oddiy videolar — format tanlash.
+    if video_dl.is_yt_shorts(text):
+        await _legacy_audio_flow(message, video_id, t, bot)
+    else:
+        await _show_preview(message, video_id, t)
+
+
+# ─── Preview + format tanlash (oddiy videolar) ───────────────────────────────
+
+async def _show_preview(message: Message, video_id: str, t: Texts) -> None:
+    status = await message.answer(t.YT_FETCHING)
+
+    try:
+        meta = await video_dl.get_yt_meta(video_id)
+    except video_dl.YTError as e:
+        await status.edit_text(_err_text(t, e.reason))
+        return
+    except Exception:
+        log.exception("YouTube metadata failed: %s", video_id)
+        await status.edit_text(t.YT_UNAVAILABLE)
+        return
+
+    esc = html.escape
+    title = meta.title or video_id
+    caption = t.YT_CHOOSE_FORMAT.format(
+        title=esc(title[:200]),
+        channel=esc(meta.channel or "YouTube"),
+        duration=f" · ⏱ {_hms(meta.duration)}" if meta.duration else "",
+    )
+    kb = keyboards.yt_formats(video_id, meta.formats, t)
+
+    await status.delete()
+    try:
+        await message.answer_photo(meta.thumbnail, caption=caption, reply_markup=kb)
+    except Exception:
+        # Muqova yuklanmadi (webp/404) — matnli preview ham yetarli.
+        log.debug("YouTube thumbnail send failed: %s", video_id)
+        await message.answer(caption, reply_markup=kb)
+
+
+@router.callback_query(F.data.startswith("ytf:"))
+async def cb_yt_format(cq: CallbackQuery, t: Texts, bot: Bot) -> None:
+    _, fmt, video_id = cq.data.split(":", 2)
+    if fmt not in video_dl.FMT_ORDER:
+        await cq.answer()
+        return
+
+    # Ikki marta tez bosilsa Telegram klaviaturani o'chirishga ulgurmaydi —
+    # ikkinchi bosishni shu yerda to'xtatamiz, aks holda ikki marta yuklanadi.
+    key = (cq.message.chat.id, cq.message.message_id)
+    if key in _inflight:
+        await cq.answer()
+        return
+    _inflight.add(key)
+
+    try:
+        await _run_format_download(cq, t, bot, fmt, video_id)
+    finally:
+        _inflight.discard(key)
+
+
+async def _run_format_download(
+    cq: CallbackQuery, t: Texts, bot: Bot, fmt: str, video_id: str,
+) -> None:
+    await cq.answer()
+    preview = cq.message
+    # Tugmalarni olib tashlaymiz — ikkinchi bosish yangi yuklashni boshlamasin.
+    try:
+        await preview.edit_caption(
+            caption=t.YT_PREPARING.format(fmt=fmt.upper()), reply_markup=None
+        )
+    except Exception:
+        try:
+            await preview.edit_text(t.YT_PREPARING.format(fmt=fmt.upper()))
+        except Exception:
+            pass
+
+    user_id = cq.from_user.id
+    chat_id = preview.chat.id
+
+    try:
+        meta = await video_dl.get_yt_meta(video_id)
+    except video_dl.YTError as e:
+        await _fail(preview, _err_text(t, e.reason))
+        return
+    except Exception:
+        log.exception("YouTube metadata failed on format pick: %s", video_id)
+        await _fail(preview, t.YT_UNAVAILABLE)
+        return
+
+    track = _yt_track(meta)
+    store.remember([track])
+    cache_key = f"yt-{fmt}"
+
+    file_id = await repo.cache_get(track.id, cache_key)
+    if file_id:
+        await _send_ready(bot, chat_id, user_id, file_id, None, track, fmt, t)
+        await repo.incr("cache_hits")
+        await _delete(preview)
+        return
+
+    try:
+        with tempfile.TemporaryDirectory(prefix="ytfmt_") as tmpdir:
+            path = await video_dl.download_yt_audio(video_id, fmt, tmpdir)
+            msg = await _send_ready(
+                bot, chat_id, user_id, None, path, track, fmt, t
+            )
+            file_id = msg.audio.file_id if msg.audio else (
+                msg.document.file_id if msg.document else None
+            )
+            if file_id:
+                await repo.cache_put(
+                    track.id, cache_key, file_id, track.title, track.artists
+                )
+        await repo.incr("downloads")
+        await _delete(preview)
+    except video_dl.YTTooLarge:
+        await _fail(preview, t.ERR_TOO_LARGE.format(name=html.escape(track.title or "YouTube")))
+    except video_dl.YTError as e:
+        await _fail(preview, _err_text(t, e.reason))
+    except Exception:
+        log.exception("YouTube %s download failed: %s", fmt, video_id)
+        await _fail(preview, t.YT_UNAVAILABLE)
+
+
+async def _send_ready(
+    bot: Bot, chat_id: int, user_id: int, file_id: str | None,
+    path: str | None, track: Track, fmt: str, t: Texts,
+) -> Message:
+    """Tayyor audioni yuboradi: mp3/m4a → pleyer, flac/opus → hujjat."""
+    audio = file_id or FSInputFile(path)  # type: ignore[arg-type]
+    if fmt in video_dl.AUDIO_FORMATS:
+        is_fav = await repo.is_favorite(user_id, track.id)
+        return await bot.send_audio(
+            chat_id=chat_id,
+            audio=audio,
+            title=track.title or None,
+            performer=track.artists or None,
+            duration=track.duration or None,
+            caption=track_caption(track),
+            reply_markup=keyboards.post_download_kb(track, t, is_fav),
+        )
+    # Telegram pleyeri faqat mp3/m4a ni tanidi — FLAC/OPUS hujjat sifatida ketadi,
+    # shunda sifat va teglar buzilmaydi.
+    return await bot.send_document(
+        chat_id=chat_id, document=audio, caption=track_caption(track)
+    )
+
+
+async def _fail(preview: Message, text: str) -> None:
+    try:
+        await preview.edit_caption(caption=text, reply_markup=None)
+    except Exception:
+        try:
+            await preview.edit_text(text)
+        except Exception:
+            pass
+
+
+async def _delete(msg: Message) -> None:
+    try:
+        await msg.delete()
+    except Exception:
+        pass
+
+
+# ─── Legacy oqim (faqat Shorts) ──────────────────────────────────────────────
+
+async def _legacy_audio_flow(message: Message, video_id: str, t: Texts, bot: Bot) -> None:
     status = await message.answer(t.YT_PROCESSING)
 
     # Try to get metadata first (non-blocking, best-effort)

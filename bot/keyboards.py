@@ -75,6 +75,21 @@ def favorites_list(rows, t: Texts) -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
+def yt_formats(video_id: str, formats, t: Texts) -> InlineKeyboardMarkup:
+    """YouTube video preview ostidagi format tanlash klaviaturasi (2×2 tarmoq)."""
+    labels = {
+        "mp3": t.BTN_YT_MP3,
+        "m4a": t.BTN_YT_M4A,
+        "flac": t.BTN_YT_FLAC,
+        "opus": t.BTN_YT_OPUS,
+    }
+    kb = InlineKeyboardBuilder()
+    for fmt in formats:
+        kb.button(text=labels[fmt], callback_data=f"ytf:{fmt}:{video_id}")
+    kb.adjust(2)
+    return kb.as_markup()
+
+
 def connect_button(auth_url: str, t: Texts) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
