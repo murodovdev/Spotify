@@ -86,14 +86,33 @@ async def render(role: str):
         f"Status: <b>{'🟢 ON' if on else '⚪️ OFF'}</b> · {active}/{len(rows)} active",
         "",
     ]
+    broken = forcesub.broken()
     if not rows:
         lines.append("<i>No channels configured yet.</i>")
     else:
         for r in rows:
             handle = f"@{r['username']}" if r["username"] else f"<code>{r['chat_id']}</code>"
-            lines.append(f"  {'🟢' if r['enabled'] else '⚪️'} {html.escape(r['title'][:34])} · {handle}")
-    if on and active == 0:
-        lines.append("\n⚠️ <i>Enabled, but no active channels — nothing is enforced.</i>")
+            mark = " ❌" if r["chat_id"] in broken else ""
+            lines.append(
+                f"  {'🟢' if r['enabled'] else '⚪️'} {html.escape(r['title'][:34])} · {handle}{mark}"
+            )
+
+    # Majburiy obuna jimgina ishlamay turishi mumkin — buni ko'rsatib qo'yamiz.
+    if not on:
+        lines.append("\n⚠️ <i>Turned OFF — nobody is being checked.</i>")
+    elif active == 0:
+        lines.append("\n⚠️ <i>ON, but no active channels — nothing is enforced.</i>")
+    elif broken:
+        failing = [r for r in rows if r["enabled"] and r["chat_id"] in broken]
+        if len(failing) == active:
+            lines.append(
+                "\n🚨 <b>Every check is failing — nobody is blocked.</b>\n"
+                "<i>The bot is probably not an admin in those chats. "
+                "Membership errors fail open on purpose, so a broken channel "
+                "cannot lock everyone out of the bot. Hit 🧪 Test for details.</i>"
+            )
+        else:
+            lines.append(f"\n⚠️ <i>{len(failing)} chat(s) failing — skipped in checks (❌).</i>")
 
     return "\n".join(lines), _kb(rows)
 

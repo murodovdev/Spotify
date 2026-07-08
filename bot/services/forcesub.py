@@ -43,6 +43,11 @@ _verified: "OrderedDict[int, float]" = OrderedDict()
 _chats: list = []
 _chats_loaded = False
 
+# Tekshiruvi xato bergan (fail-open bo'lgan) chatlar: chat_id → oxirgi xato matni.
+# Admin panelida ko'rsatiladi — aks holda majburiy obuna jimgina ishlamay turadi.
+_broken: dict[int, str] = {}
+_last_noop_warn = 0.0
+
 
 def enabled() -> bool:
     return bool(settings_store.get("force_sub")) and bool(_chats)
@@ -54,6 +59,7 @@ async def reload() -> None:
     _chats = list(await forcesub_repo.list_enabled())
     _chats_loaded = True
     _verified.clear()  # ro'yxat o'zgardi — eski "obuna" natijalari yaroqsiz
+    _broken.clear()    # xato holati ham eskirdi (bot admin qilingan bo'lishi mumkin)
     log.info("Force-sub: %d ta faol kanal yuklandi", len(_chats))
 
 
@@ -89,11 +95,13 @@ async def _is_member(bot: Bot, chat_id: int, user_id: int) -> bool:
     except TelegramAPIError as e:
         # "chat not found", "bot is not a member", "not enough rights",
         # "member list is inaccessible" — bularning hammasi admin muammosi.
+        _broken[chat_id] = str(e)[:120]
         log.error(
             "Force-sub: %s chatini tekshirib bo'lmadi (bot admin emasmi?): %s",
             chat_id, e,
         )
         return True
+    _broken.pop(chat_id, None)
     status = getattr(member, "status", "")
     if status in _OK_STATUSES:
         return True
@@ -113,7 +121,33 @@ async def missing_for(bot: Bot, user_id: int) -> list:
     missing = [c for c in _chats if not await _is_member(bot, c["chat_id"], user_id)]
     if not missing:
         _remember(user_id)
+        _warn_if_noop()
     return missing
+
+
+def _warn_if_noop() -> None:
+    """Har bir chat fail-open bo'lsa, majburiy obuna amalda hech kimni to'smaydi.
+
+    Bu holat jim o'tib ketmasin: admin "yoqilgan" deb o'ylab yuradi. Soatiga bir
+    marta ogohlantiramiz (har o'tgan foydalanuvchida emas).
+    """
+    global _last_noop_warn
+    if not _chats or len(_broken) < len(_chats):
+        return
+    now = time.monotonic()
+    if now - _last_noop_warn < 3600:
+        return
+    _last_noop_warn = now
+    log.error(
+        "Force-sub YOQILGAN, lekin %d/%d chatning tekshiruvi xato bermoqda — "
+        "hech kim to'silmayapti. Bot o'sha chatlarda admin ekanini tekshiring.",
+        len(_broken), len(_chats),
+    )
+
+
+def broken() -> dict[int, str]:
+    """Tekshiruvi xato bergan chatlar (admin paneli uchun)."""
+    return dict(_broken)
 
 
 async def verify(bot: Bot, user_id: int) -> list:
