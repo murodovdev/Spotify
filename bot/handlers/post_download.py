@@ -339,6 +339,9 @@ async def cb_effects_back(cq: CallbackQuery, t: Texts) -> None:
 async def cb_meta_menu(cq: CallbackQuery, t: Texts) -> None:
     track_id = cq.data[3:]
     await cq.answer()
+    # Tugma YouTube audiosi uchun endi ko'rsatilmaydi — eski xabarlardagisi jim qolsin.
+    if track_id.startswith("yt:"):
+        return
     try:
         await cq.message.edit_reply_markup(
             reply_markup=keyboards.metadata_editor_kb(track_id, t)
