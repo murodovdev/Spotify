@@ -90,6 +90,25 @@ def yt_formats(video_id: str, formats, t: Texts) -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
+def force_sub(chats, t: Texts) -> InlineKeyboardMarkup:
+    """Majburiy obuna ekrani: har kanal uchun havola + "Qo'shildim" tugmasi.
+
+    Havolasiz chat (username ham, invite_link ham yo'q) tugma sifatida
+    ko'rsatilmaydi — Telegram bo'sh `url` bilan klaviaturani rad etadi.
+    """
+    from bot.services import forcesub
+
+    kb = InlineKeyboardBuilder()
+    for c in chats:
+        url = forcesub.chat_url(c)
+        if not url:
+            continue
+        icon = "👥" if c["kind"] == "group" else "📢"
+        kb.row(InlineKeyboardButton(text=f"{icon} {c['title'][:40]}", url=url))
+    kb.row(InlineKeyboardButton(text=t.BTN_FS_CHECK, callback_data="fs:check"))
+    return kb.as_markup()
+
+
 def connect_button(auth_url: str, t: Texts) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[

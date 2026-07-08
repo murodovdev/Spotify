@@ -168,6 +168,13 @@ class Texts:
     BTN_FIND_MUSIC: str
     FINDING_MUSIC: str
 
+    # --- Majburiy obuna ---
+    FS_TITLE: str
+    FS_ALERT: str
+    FS_STILL_MISSING: str
+    FS_JOINED: str
+    BTN_FS_CHECK: str
+
     # --- Admin ---
     STATS: str
 
@@ -461,6 +468,17 @@ UZ = Texts(
         "<i>Boshqa barcha funksiyalar bepul ishlaydi.</i>"
     ),
     ERR_EXPIRED="⏱ Vaqt tugadi. Qaytadan urinib ko'ring.",
+
+    FS_TITLE=(
+        "🔒 <b>TrackFlow'dan foydalanishdan oldin</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━\n\n"
+        "Botdan foydalanish uchun quyidagi kanallarga qo'shiling.\n\n"
+        "Qo'shib bo'lgach, <b>✅ Qo'shildim</b> tugmasini bosing."
+    ),
+    FS_ALERT="🔒 Avval quyidagi kanallarga qo'shiling.",
+    FS_STILL_MISSING="❌ Hali qo'shilmadingiz: {chats}",
+    FS_JOINED="✅ Rahmat! Endi botdan bemalol foydalanishingiz mumkin.",
+    BTN_FS_CHECK="✅ Qo'shildim",
 
     STATS=(
         "📊 <b>Statistika</b>\n"
@@ -762,6 +780,17 @@ EN = Texts(
     ),
     ERR_EXPIRED="⏱ Session expired. Try again.",
 
+    FS_TITLE=(
+        "🔒 <b>Before using TrackFlow</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━\n\n"
+        "Please join the following channels to continue using the bot.\n\n"
+        "Once you've joined, tap <b>✅ I've Joined</b>."
+    ),
+    FS_ALERT="🔒 Please join the required channels first.",
+    FS_STILL_MISSING="❌ Still not joined: {chats}",
+    FS_JOINED="✅ Thanks! You can use the bot now.",
+    BTN_FS_CHECK="✅ I've Joined",
+
     STATS=(
         "📊 <b>Stats</b>\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
@@ -1062,6 +1091,17 @@ RU = Texts(
         "<i>Все остальные функции работают без Premium.</i>"
     ),
     ERR_EXPIRED="⏱ Сессия устарела. Попробуйте снова.",
+
+    FS_TITLE=(
+        "🔒 <b>Перед использованием TrackFlow</b>\n"
+        "━━━━━━━━━━━━━━━━━━━━\n\n"
+        "Подпишитесь на следующие каналы, чтобы продолжить.\n\n"
+        "После подписки нажмите <b>✅ Я подписался</b>."
+    ),
+    FS_ALERT="🔒 Сначала подпишитесь на каналы.",
+    FS_STILL_MISSING="❌ Ещё не подписаны: {chats}",
+    FS_JOINED="✅ Спасибо! Теперь бот доступен.",
+    BTN_FS_CHECK="✅ Я подписался",
 
     STATS=(
         "📊 <b>Статистика</b>\n"

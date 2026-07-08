@@ -18,6 +18,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
+from bot.admin import forcesub as fs_admin
 from bot.admin import keyboards, logbuf, repo, roles, settings_store
 from bot.admin.access import AdminFilter, ensure_perm
 from bot.admin.roles import Perm
@@ -496,6 +497,7 @@ async def _sec_broadcast(role: str):
 
 
 _RENDERERS = {
+    "fs": fs_admin.render,
     "users": _sec_users,
     "bc": _sec_broadcast,
     "an": _sec_analytics,

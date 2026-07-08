@@ -19,6 +19,7 @@ DEFAULTS: dict[str, object] = {
     "feature_video": True,         # video yuklab olish yoqilgan
     "feature_similar": True,       # o'xshash qo'shiqlar yoqilgan
     "feature_effects": True,       # audio effektlar yoqilgan
+    "force_sub": False,            # majburiy obuna yoqilgan (kanallar: force_subs jadvali)
     "download_limit": 0,           # har foydalanuvchiga kunlik limit (0 = cheksiz)
     "welcome_override": "",        # bo'sh bo'lmasa i18n WELCOME o'rniga
     "announcement": "",            # start'да ko'rsatiladigan e'lon (bo'sh = yo'q)

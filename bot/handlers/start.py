@@ -13,7 +13,7 @@ from bot.i18n import LANG_LABELS, WELCOME_BANNER, Texts, get_texts
 router = Router(name="start")
 
 
-def _welcome(t: Texts, first_name: str | None) -> str:
+def welcome_text(t: Texts, first_name: str | None) -> str:
     name = html.escape((first_name or "").strip()) or "🎧"
     override = settings_store.get("welcome_override")
     # Admin override'ni HTML sifatida ESCAPE qilamiz: noto'g'ri HTML (masalan
@@ -39,7 +39,7 @@ async def cmd_start(message: Message, lang: str | None, t: Texts) -> None:
         return
     connected = await repo.is_connected(message.from_user.id)
     await message.answer(
-        _welcome(t, message.from_user.first_name),
+        welcome_text(t, message.from_user.first_name),
         reply_markup=keyboards.main_menu(connected, t),
     )
 
@@ -54,7 +54,7 @@ async def cb_lang(cq: CallbackQuery) -> None:
     t = get_texts(lang)
     await cq.answer(t.LANG_SET)
     connected = await repo.is_connected(cq.from_user.id)
-    text = _welcome(t, cq.from_user.first_name)
+    text = welcome_text(t, cq.from_user.first_name)
     try:
         await cq.message.edit_text(text, reply_markup=keyboards.main_menu(connected, t))
     except Exception:
@@ -71,7 +71,7 @@ async def cb_home(cq: CallbackQuery, t: Texts) -> None:
     """Sozlamalar yoki boshqa ekrandan asosiy menyuga qaytish."""
     await cq.answer()
     connected = await repo.is_connected(cq.from_user.id)
-    text = _welcome(t, cq.from_user.first_name)
+    text = welcome_text(t, cq.from_user.first_name)
     try:
         await cq.message.edit_text(text, reply_markup=keyboards.main_menu(connected, t))
     except Exception:

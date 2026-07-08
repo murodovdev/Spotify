@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 
 # Sxema versiyasi. Yangi migratsiya qo'shsangiz oshiring va _migrate() ga bosqich
 # qo'shing.
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 # Yangi o'rnatishlar uchun yakuniy sxema (idempotent). Eski bazalar _migrate()
 # orqali shu holatga keltiriladi.
@@ -124,6 +124,19 @@ CREATE TABLE IF NOT EXISTS bot_settings(
     value  TEXT
 );
 
+-- Majburiy obuna: botdan foydalanishdan oldin qo'shilishi shart bo'lgan
+-- kanal/guruhlar. Faqat admin panel orqali boshqariladi — hech qanday chat id
+-- kodда qattiq yozilmaydi.
+CREATE TABLE IF NOT EXISTS force_subs(
+    chat_id      INTEGER PRIMARY KEY,
+    username     TEXT,               -- '@' siz, mavjud bo'lsa
+    title        TEXT NOT NULL,
+    kind         TEXT NOT NULL,      -- 'channel' | 'group'
+    invite_link  TEXT,               -- maxfiy chatlar uchun yagona kirish yo'li
+    enabled      INTEGER NOT NULL DEFAULT 1,
+    sort_order   INTEGER NOT NULL DEFAULT 0
+);
+
 -- Har bir sezgir admin amali uchun audit izi.
 CREATE TABLE IF NOT EXISTS audit_log(
     id        INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -224,6 +237,14 @@ async def _migrate() -> None:
             )
         await _db.execute(
             "CREATE INDEX IF NOT EXISTS idx_users_last_active ON users(last_active)"
+        )
+
+    if version < 4:
+        # v4: majburiy obuna (force_subs). Jadval BASE_SCHEMA (CREATE IF NOT
+        # EXISTS) orqali yaratildi; bu yerda faqat tartiblash indeksi.
+        await _db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_force_subs_order "
+            "ON force_subs(enabled, sort_order)"
         )
 
     await _db.execute(f"PRAGMA user_version={SCHEMA_VERSION}")

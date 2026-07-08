@@ -10,12 +10,13 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.client.telegram import TelegramAPIServer
 from aiogram.enums import ParseMode
-from aiogram.types import BotCommand, CallbackQuery, ErrorEvent, Message
+from aiogram.types import BotCommand, CallbackQuery, ErrorEvent, InlineQuery, Message
 from aiohttp import web
 
 from bot.admin import broadcast as admin_broadcast
 from bot.admin import dashboard as admin_dashboard
 from bot.admin import flows as admin_flows
+from bot.admin import forcesub as admin_forcesub
 from bot.admin import logbuf, settings_store
 from bot.admin import repo as admin_repo
 from bot.config import settings
@@ -23,6 +24,7 @@ from bot.db import maintenance, repo
 from bot.db.database import close_db, init_db
 from bot.handlers import (
     favorites,
+    forcesub as forcesub_handler,
     library,
     links,
     playlist,
@@ -35,7 +37,7 @@ from bot.handlers import (
     youtube,
 )
 from bot.i18n import get_texts
-from bot.services import tempsweep, tg_limits
+from bot.services import forcesub, tempsweep, tg_limits
 from bot.services.spotify import spotify
 from bot.web.oauth import build_app
 
@@ -92,7 +94,51 @@ class UserMiddleware(BaseMiddleware):
             if role is None and settings_store.is_maintenance():
                 await _notify_maintenance(event)
                 return
+
+            # Majburiy obuna — adminlardan tashqari hamma uchun.
+            if role is None and forcesub.enabled():
+                if not await _force_sub_ok(event, user.id, t, data):
+                    return
         return await handler(event, data)
+
+
+async def _force_sub_ok(event, user_id: int, t, data) -> bool:
+    """False qaytarsa handler ishga tushmaydi va obuna ekrani ko'rsatiladi."""
+    # "✅ Qo'shildim" tugmasi gate'dan ozod — aks holda foydalanuvchi hech qachon
+    # o'zini qayta tekshira olmasdi va botda qulflanib qolardi.
+    if isinstance(event, CallbackQuery) and event.data == "fs:check":
+        return True
+
+    bot = data.get("bot")
+    if bot is None:
+        return True  # bot yo'q — tekshirib bo'lmaydi, ochiq qoldiramiz
+
+    missing = await forcesub.missing_for(bot, user_id)
+    if not missing:
+        return True
+
+    # Inline so'rov: ekran ko'rsatib bo'lmaydi — jim rad etamiz.
+    if isinstance(event, InlineQuery):
+        try:
+            await event.answer([], cache_time=5, is_personal=True)
+        except Exception:
+            pass
+        return False
+
+    if isinstance(event, CallbackQuery):
+        # Alert yetarli — har bosishда yangi xabar yubormaymiz (spam bo'lardi).
+        await event.answer(t.FS_ALERT, show_alert=True)
+        return False
+
+    # Xabarlar uchun ekran ko'rsatamiz, lekin throttle bilan: foydalanuvchi
+    # ketma-ket 5 ta xabar yozsa 5 ta bir xil ekran chiqmasin.
+    if not forcesub.should_send_screen(user_id):
+        return False
+    try:
+        await forcesub_handler.send_screen(bot, event.chat.id, t)
+    except Exception:
+        log.exception("Force-sub ekranini yuborib bo'lmadi: %s", user_id)
+    return False
 
 
 async def _notify_blocked(event, reason: str | None) -> None:
@@ -147,6 +193,7 @@ async def main() -> None:
     await settings_store.load()
     await admin_repo.load_bans()
     await admin_repo.load_admins()
+    await forcesub.reload()  # majburiy obuna kanallari (xotira keshi)
     # Qayta ishga tushishдан oldin tugamagan broadcastlar 'failed' deb belgilanadi.
     stale = await admin_repo.reconcile_broadcasts()
     if stale:
@@ -176,7 +223,9 @@ async def main() -> None:
         admin_dashboard.router,
         admin_flows.router,
         admin_broadcast.router,
+        admin_forcesub.router,
         start.router,
+        forcesub_handler.router,   # fs:check — gate'dan ozod
         library.router,
         favorites.router,
         settings_handlers.router,

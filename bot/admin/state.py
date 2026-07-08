@@ -11,3 +11,4 @@ class AdminFSM(StatesGroup):
     broadcast_schedule = State() # broadcast vaqtini kutish (data: msg)
     add_admin = State()        # yangi admin ID (data: role)
     setting_value = State()    # sozlama qiymatini kutish (data: key)
+    fs_add = State()           # majburiy obuna: @username / chat id / forward kutish

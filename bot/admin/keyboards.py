@@ -19,6 +19,7 @@ SECTIONS = [
     ("📢 Broadcast",   "bc",      Perm.BROADCAST),
     ("🎵 Music",       "music",   Perm.MANAGE_MUSIC),
     ("⚙️ Settings",    "set",     Perm.MANAGE_SETTINGS),
+    ("🔒 Force Sub",   "fs",      Perm.MANAGE_SETTINGS),
     ("🌐 Language",    "lang",    Perm.VIEW),
     ("🚫 Moderation",  "mod",     Perm.MODERATE),
     ("💾 Database",    "db",      Perm.MANAGE_DB),

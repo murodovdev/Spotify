@@ -80,4 +80,10 @@ tokens) and the `/health` endpoint used by the platform health check.
   [CONFIGURATION.md](CONFIGURATION.md)).
 - **Single replica.** Long-polling and the attached volume both require exactly
   one instance; horizontal scaling is intentionally not supported.
+- **Force subscription fails open.** `getChatMember` errors (bot demoted, channel
+  deleted, chat unreachable) skip that channel and log at ERROR rather than
+  blocking the user. A misconfigured channel would otherwise brick the bot for
+  everyone — including the admin trying to fix it. Only an explicit `left` /
+  `kicked` from Telegram denies access. Successful checks are cached for 10
+  minutes; failures never are, so joining takes effect immediately.
 - **Encryption at rest.** OAuth tokens are stored Fernet-encrypted.
