@@ -26,6 +26,12 @@ class Settings(BaseSettings):
     media_server_url: str = ""
     media_server_secret: str = ""
 
+    # Telegram API serveri: "cloud" (api.telegram.org, 50 MB) yoki "local"
+    # (Local Bot API Server, 2 GB). Rejim butun bot uchun — token ikkala serverda
+    # bir vaqtda ishlay olmaydi. "local" tanlansa TELEGRAM_API_BASE shart.
+    telegram_api_mode: str = "cloud"
+    telegram_api_base: str = ""  # masalan: http://127.0.0.1:8081
+
     @property
     def database_path(self) -> str:
         """DB fayl yo'li. Aniq DB_PATH berilmasa: Railway'da volume (/data),

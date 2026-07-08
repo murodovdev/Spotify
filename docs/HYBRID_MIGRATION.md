@@ -67,6 +67,37 @@ localized "queued, hang on" message. The bot stays responsive.
 Large-file support (up to 2 GB). The `file_id` decision above is implemented here,
 along with the corresponding cache migration.
 
+**Groundwork done.** Size limits are now a property of the active API mode rather
+than five hardcoded constants (`bot/services/tg_limits.py`), and `main.py` builds
+an `AiohttpSession` pointed at a local server when `TELEGRAM_API_MODE=local`.
+Setting that env var is *not* yet sufficient — see the two blockers below.
+
+#### There is no per-file fallback
+
+A token cannot use the cloud API and a local server at the same time: Telegram's
+workflow is `logOut` from the cloud, then launch locally. "Use the local server
+when a file exceeds 50 MB" is therefore not implementable as a runtime switch.
+The mode is chosen at deploy time, for the whole bot.
+
+The graceful path when a file will not fit is to **offer a smaller format**, which
+the YouTube format picker now does (`video_dl.smaller_formats`): a 60 MB FLAC on
+the cloud API re-renders the keyboard with MP3 / M4A / OPUS rather than failing.
+
+#### Remaining blockers before `TELEGRAM_API_MODE=local` is usable
+
+1. **`file_id` invalidation.** Existing cloud `file_id`s in `track_cache` stop
+   resolving after `logOut`. Decide between the two options above and migrate.
+2. **Uploads must not cross the network.** A local server accepts an *absolute
+   path* in `sendAudio` instead of a multipart upload — a 2 GB file is then never
+   uploaded, just read off disk. This only works when the process calling
+   `sendAudio` shares a filesystem with the API server. A Railway bot talking to a
+   VPS local server would still POST 2 GB over the wire. So in the final design the
+   **media server** issues the send, not Railway (step 7 of the job flow), and
+   `wrap_local_file` must be configured accordingly.
+
+Until then, `TELEGRAM_API_MODE=local` is only correct for a single-box deployment
+where the bot, the media work, and the API server all live together.
+
 ### Phase 4 — Postgres + Redis + Celery (optional)
 
 Only if multi-replica is actually wanted; this is what unpins `numReplicas`. It is
@@ -91,3 +122,8 @@ Heavy media work is reached only through `media.backend()`.
 | `MEDIA_BACKEND` | `local` | `local` (in-process) or `remote` (VPS, Phase 1) |
 | `MEDIA_SERVER_URL` | — | Base URL of the media service; required when remote |
 | `MEDIA_SERVER_SECRET` | — | HMAC signing secret shared with the media service |
+| `TELEGRAM_API_MODE` | `cloud` | `cloud` (50 MB uploads, 20 MB downloads) or `local` (2 GB) |
+| `TELEGRAM_API_BASE` | — | Local Bot API Server base URL, e.g. `http://127.0.0.1:8081`; required when local |
+
+Size limits are never hardcoded at a call site. Ask `bot/services/tg_limits.py`:
+`max_upload_bytes()` and `max_download_bytes()` read the active mode at call time.

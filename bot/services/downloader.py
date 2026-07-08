@@ -15,12 +15,13 @@ from mutagen.id3 import APIC, ID3, TALB, TDRC, TIT2, TPE1, TRCK
 from mutagen.id3._util import ID3NoHeaderError
 from yt_dlp import YoutubeDL
 
-from bot.services import matcher, ytdlp_common
+from bot.services import matcher, tg_limits, ytdlp_common
 from bot.services.spotify import Track, spotify
 
 log = logging.getLogger(__name__)
 
-MAX_SIZE = 49 * 1024 * 1024
+# Chegara bot ulangan API serverga bog'liq (cloud 50 MB / local 2 GB) —
+# bot/services/tg_limits.py ga qarang.
 LONG_TRACK_SECONDS = 1200
 
 _MAX_CONCURRENT = int(os.getenv("MAX_DOWNLOADS", "4"))
@@ -169,11 +170,13 @@ async def download(track: Track, bitrate: str, tmpdir: str) -> Downloaded:
         cover = await cover_task
         thumb = await thumb_task
 
-    if os.path.getsize(path) > MAX_SIZE:
+    max_upload = tg_limits.max_upload_bytes()
+    if os.path.getsize(path) > max_upload:
+        # Sifatni pasaytirib sig'dirishga urinamiz (lokal API'da 2 GB — kamdan-kam).
         if bitrate != "128":
             loop = asyncio.get_running_loop()
             path = await loop.run_in_executor(_executor, _reencode, path, "128")
-        if os.path.getsize(path) > MAX_SIZE:
+        if os.path.getsize(path) > max_upload:
             raise TooLarge(track.full_name)
 
     loop = asyncio.get_running_loop()

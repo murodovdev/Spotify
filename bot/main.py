@@ -7,6 +7,8 @@ import time
 
 from aiogram import BaseMiddleware, Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
+from aiogram.client.session.aiohttp import AiohttpSession
+from aiogram.client.telegram import TelegramAPIServer
 from aiogram.enums import ParseMode
 from aiogram.types import BotCommand, CallbackQuery, ErrorEvent, Message
 from aiohttp import web
@@ -33,7 +35,7 @@ from bot.handlers import (
     youtube,
 )
 from bot.i18n import get_texts
-from bot.services import tempsweep
+from bot.services import tempsweep, tg_limits
 from bot.services.spotify import spotify
 from bot.web.oauth import build_app
 
@@ -117,6 +119,27 @@ async def _notify_maintenance(event) -> None:
         pass
 
 
+def _build_session() -> AiohttpSession | None:
+    """Bulutli API uchun None (aiogram sukut bo'yicha), lokal server uchun sessiya.
+
+    Local Bot API Server 2 GB gacha yuborishga ruxsat beradi. Diqqat: tokenni
+    lokal serverda ishlatishdan oldin bulutda `logOut` chaqirilishi kerak va
+    eski bulutli `file_id`lar yaroqsiz bo'ladi (`track_cache` shular bo'yicha
+    kalitlangan) — docs/HYBRID_MIGRATION.md ga qarang.
+    """
+    if not tg_limits.is_local_api():
+        return None
+    base = (settings.telegram_api_base or "").strip()
+    if not base:
+        raise RuntimeError(
+            "TELEGRAM_API_MODE=local, lekin TELEGRAM_API_BASE berilmagan "
+            "(masalan: http://127.0.0.1:8081)"
+        )
+    log.info("Telegram API: local server %s (yuborish %s gacha)",
+             base, tg_limits.human_mb(tg_limits.max_upload_bytes()))
+    return AiohttpSession(api=TelegramAPIServer.from_base(base, is_local=True))
+
+
 async def main() -> None:
     _setup_logging()
     await init_db(settings.database_path)
@@ -136,6 +159,7 @@ async def main() -> None:
     bot = Bot(
         settings.bot_token,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+        session=_build_session(),
     )
     dp = Dispatcher()
     dp.message.outer_middleware(UserMiddleware())

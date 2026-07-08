@@ -19,7 +19,7 @@ from aiogram.types import CallbackQuery, FSInputFile, Message
 from bot import keyboards, store
 from bot.db import repo
 from bot.i18n import Texts, track_caption
-from bot.services import media, video_dl
+from bot.services import media, tg_limits, video_dl
 from bot.services.downloader import TooLarge, TrackNotFound
 from bot.services.spotify import Track
 
@@ -226,12 +226,34 @@ async def _run_format_download(
         await repo.incr("downloads")
         await _delete(preview)
     except video_dl.YTTooLarge:
-        await _fail(preview, t.ERR_TOO_LARGE.format(name=html.escape(track.title or "YouTube")))
+        await _offer_smaller(preview, video_id, fmt, meta.formats, t)
     except video_dl.YTError as e:
         await _fail(preview, _err_text(t, e.reason))
     except Exception:
         log.exception("YouTube %s download failed: %s", fmt, video_id)
         await _fail(preview, t.YT_UNAVAILABLE)
+
+
+async def _offer_smaller(
+    preview: Message, video_id: str, fmt: str, available: tuple[str, ...], t: Texts,
+) -> None:
+    """Fayl chegaradan oshdi — yiqilish o'rniga kichikroq formatlarni taklif qilamiz."""
+    alts = video_dl.smaller_formats(fmt, available)
+    if not alts:
+        # OPUS ham sig'madi: bundan kichigi yo'q.
+        await _fail(preview, t.ERR_TOO_LARGE.format(name=fmt.upper()))
+        return
+    text = t.YT_TOO_LARGE_ALT.format(
+        fmt=fmt.upper(), limit=tg_limits.human_mb(tg_limits.max_upload_bytes())
+    )
+    kb = keyboards.yt_formats(video_id, alts, t)
+    try:
+        await preview.edit_caption(caption=text, reply_markup=kb)
+    except Exception:
+        try:
+            await preview.edit_text(text, reply_markup=kb)
+        except Exception:
+            pass
 
 
 async def _send_ready(

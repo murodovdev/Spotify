@@ -13,7 +13,7 @@ from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 
-from bot.services import ytdlp_common
+from bot.services import tg_limits, ytdlp_common
 
 log = logging.getLogger(__name__)
 
@@ -71,10 +71,7 @@ _PLATFORMS: list[tuple[str, re.Pattern]] = [
     )),
 ]
 
-# 50 MB — Telegram bot video upload limit
-MAX_VIDEO_BYTES = 50 * 1024 * 1024
-# Audio uchun xavfsiz chegara (Telegram 50 MB, biroz zaxira qoldiramiz)
-MAX_AUDIO_BYTES = 49 * 1024 * 1024
+# Yuklash chegaralari API rejimiga bog'liq — bot/services/tg_limits.py.
 
 
 @dataclass
@@ -154,7 +151,7 @@ def _ydl_download_video(url: str, tmpdir: str) -> VideoInfo:
         raise FileNotFoundError("Downloaded file not found in tmpdir")
 
     size = os.path.getsize(video_path)
-    if size > MAX_VIDEO_BYTES:
+    if size > tg_limits.max_upload_bytes():
         raise ValueError(f"Video too large ({size // 1_048_576} MB)")
 
     return VideoInfo(
@@ -270,6 +267,17 @@ def classify_yt_error(exc: Exception) -> str:
 # sifat/hajm nisbati. `pp` = None bo'lsa ffmpeg qayta kodlamaydi.
 FMT_MP3, FMT_M4A, FMT_FLAC, FMT_OPUS = "mp3", "m4a", "flac", "opus"
 FMT_ORDER = (FMT_MP3, FMT_M4A, FMT_FLAC, FMT_OPUS)
+
+# Taxminiy hajm tartibi (kichikdan kattaga). Fayl chegaradan oshsa foydalanuvchiga
+# faqat shu ro'yxatda *pastroq* turgan formatlar taklif qilinadi.
+_FMT_SIZE_RANK = {FMT_OPUS: 1, FMT_M4A: 2, FMT_MP3: 3, FMT_FLAC: 4}
+
+
+def smaller_formats(fmt: str, available: tuple[str, ...]) -> tuple[str, ...]:
+    """`fmt` chegaradan oshgach taklif qilinadigan kichikroq formatlar."""
+    rank = _FMT_SIZE_RANK.get(fmt, 0)
+    return tuple(f for f in available if f != fmt and _FMT_SIZE_RANK.get(f, 99) < rank)
+
 
 # Telegram audio pleyeri faqat mp3/m4a ni tanidi — qolganlari hujjat sifatida.
 AUDIO_FORMATS = frozenset({FMT_MP3, FMT_M4A})
@@ -410,7 +418,7 @@ def _ydl_download_yt_audio(video_id: str, fmt: str, tmpdir: str) -> str:
             best, best_size = fp, sz
     if not best:
         raise YTError("generic", "Audio fayl topilmadi")
-    if best_size > MAX_AUDIO_BYTES:
+    if best_size > tg_limits.max_upload_bytes():
         raise YTTooLarge(f"{best_size // 1_048_576} MB")
     return best
 

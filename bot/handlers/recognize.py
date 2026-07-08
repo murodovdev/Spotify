@@ -22,7 +22,7 @@ from bot import keyboards, store
 from bot.admin import repo as admin_repo
 from bot.admin import settings_store
 from bot.i18n import Texts
-from bot.services import recognizer, search_engine
+from bot.services import recognizer, search_engine, tg_limits
 
 log = logging.getLogger(__name__)
 router = Router(name="recognize")
@@ -34,7 +34,6 @@ _SUPPORTED_TYPES = {
     ContentType.VIDEO_NOTE,
 }
 
-_MAX_FILE_BYTES = 20 * 1024 * 1024  # Telegram bot download limit
 
 
 def _file_obj(message: Message):
@@ -63,7 +62,7 @@ async def handle_media(message: Message, t: Texts, bot: Bot) -> None:
 
     # Silently skip files that exceed the bot download limit
     size = getattr(file_obj, "file_size", None) or 0
-    if size and size > _MAX_FILE_BYTES:
+    if size and size > tg_limits.max_download_bytes():
         await message.answer(t.RECOGNIZE_TOO_LARGE)
         return
 

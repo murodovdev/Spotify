@@ -145,6 +145,7 @@ class Texts:
     YT_FETCHING: str
     YT_CHOOSE_FORMAT: str
     YT_PREPARING: str
+    YT_TOO_LARGE_ALT: str
     BTN_YT_MP3: str
     BTN_YT_M4A: str
     BTN_YT_FLAC: str
@@ -277,6 +278,10 @@ UZ = Texts(
         "<i>Yuklab olish formatini tanlang:</i>"
     ),
     YT_PREPARING="⏬ <i>{fmt} tayyorlanmoqda…</i>",
+    YT_TOO_LARGE_ALT=(
+        "⚠️ <b>{fmt}</b> hajmi {limit} chegarasidan oshdi.\n\n"
+        "<i>Kichikroq format tanlang:</i>"
+    ),
     BTN_YT_MP3="🎵 MP3 (Eng yaxshi)",
     BTN_YT_M4A="🎧 M4A (Original)",
     BTN_YT_FLAC="🎼 FLAC (Yo'qotishsiz)",
@@ -570,6 +575,10 @@ EN = Texts(
         "<i>Choose the download format:</i>"
     ),
     YT_PREPARING="⏬ <i>Preparing {fmt}…</i>",
+    YT_TOO_LARGE_ALT=(
+        "⚠️ <b>{fmt}</b> exceeds the {limit} limit.\n\n"
+        "<i>Pick a smaller format:</i>"
+    ),
     BTN_YT_MP3="🎵 MP3 (Best)",
     BTN_YT_M4A="🎧 M4A (Original)",
     BTN_YT_FLAC="🎼 FLAC (Lossless)",
@@ -864,6 +873,10 @@ RU = Texts(
         "<i>Выберите формат загрузки:</i>"
     ),
     YT_PREPARING="⏬ <i>Готовлю {fmt}…</i>",
+    YT_TOO_LARGE_ALT=(
+        "⚠️ <b>{fmt}</b> превышает лимит {limit}.\n\n"
+        "<i>Выберите формат поменьше:</i>"
+    ),
     BTN_YT_MP3="🎵 MP3 (Лучший)",
     BTN_YT_M4A="🎧 M4A (Оригинал)",
     BTN_YT_FLAC="🎼 FLAC (Без потерь)",

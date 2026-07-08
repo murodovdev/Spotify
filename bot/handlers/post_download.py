@@ -27,7 +27,7 @@ from bot import keyboards, store
 from bot.admin import settings_store
 from bot.db import repo
 from bot.i18n import Texts, track_caption
-from bot.services import audio_effects, downloader, media, recommender
+from bot.services import audio_effects, downloader, media, recommender, tg_limits
 from bot.services.spotify import Track, spotify
 
 log = logging.getLogger(__name__)
@@ -65,7 +65,8 @@ async def _resolve_track(track_id: str) -> Track | None:
 async def _get_audio_path(bot: Bot, track: Track, bitrate: str, tmpdir: str) -> str | None:
     """
     Obtain a local MP3 path for the track.
-    First tries Telegram Bot API download (fast, ≤20 MB).
+    First tries a Telegram Bot API download (fast; ≤20 MB on the cloud API,
+    effectively unbounded on a Local Bot API Server).
     Falls back to full YouTube re-download.
     """
     file_id = await repo.cache_get(track.id, bitrate) or await repo.cache_get(
@@ -74,12 +75,11 @@ async def _get_audio_path(bot: Bot, track: Track, bitrate: str, tmpdir: str) -> 
     if file_id:
         try:
             file_info = await bot.get_file(file_id)
-            if not file_info.file_size or file_info.file_size <= 20 * 1024 * 1024:
-                buf = io.BytesIO()
-                await bot.download_file(file_info.file_path, destination=buf)
+            if not file_info.file_size or file_info.file_size <= tg_limits.max_download_bytes():
+                # To'g'ridan-to'g'ri diskka oqim bilan — BytesIO faylni butunlay
+                # RAM'ga yuklardi (lokal API'da bu 2 GB bo'lishi mumkin).
                 path = os.path.join(tmpdir, "original.mp3")
-                with open(path, "wb") as f:
-                    f.write(buf.getvalue())
+                await bot.download_file(file_info.file_path, destination=path)
                 return path
         except Exception:
             log.debug("Bot API download failed for %s, falling back to YT", track.id)
@@ -270,7 +270,7 @@ async def cb_apply_effect(cq: CallbackQuery, t: Texts, bot: Bot) -> None:
             processed = os.path.join(tmpdir, f"fx_{effect}.mp3")
             await audio_effects.apply_effect(original, processed, effect)
 
-            if os.path.getsize(processed) > 50 * 1024 * 1024:
+            if os.path.getsize(processed) > tg_limits.max_upload_bytes():
                 await status.edit_text(t.ERR_TOO_LARGE.format(name=html.escape(track.full_name)))
                 return
 
