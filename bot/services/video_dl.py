@@ -228,7 +228,7 @@ def is_yt_shorts(text: str) -> bool:
 class YTError(Exception):
     """yt-dlp xatosi, foydalanuvchiga ko'rsatiladigan sabab kodi bilan.
 
-    reason: private | deleted | geo | live | age | network | generic
+    reason: private | deleted | geo | live | age | blocked | network | generic
     """
 
     def __init__(self, reason: str, detail: str = "") -> None:
@@ -255,6 +255,18 @@ def classify_yt_error(exc: Exception) -> str:
         return "age"
     if "in your country" in msg or "geo" in msg or "not available in your" in msg:
         return "geo"
+    # YouTube ekstraktorni bloklagan: bot tekshiruvi, PO token, DRM, format yo'q.
+    # Bular videoning aybi emas — cookie eskirgan yoki yt-dlp yangilanishi kerak.
+    # `deleted`dan OLDIN tekshiriladi: bu xabarlar "unavailable" so'zini ham tutadi.
+    if (
+        "not a bot" in msg
+        or "drm protected" in msg
+        or "no video formats" in msg
+        or "requested format is not available" in msg
+        or "po token" in msg
+        or "failed to extract" in msg
+    ):
+        return "blocked"
     if "removed" in msg or "deleted" in msg or "does not exist" in msg or "unavailable" in msg:
         return "deleted"
     if "timed out" in msg or "connection" in msg or "temporary failure" in msg:
@@ -342,6 +354,12 @@ def _ydl_extract_meta(video_id: str) -> YTVideoMeta:
         "no_warnings": True,
         "noplaylist": True,
         "socket_timeout": 20,
+        "skip_download": True,
+        # `format` berilmasa yt-dlp sukut bo'yicha "bestvideo*+bestaudio/best" ni
+        # tanlaydi va uni `download=False` da ham tekshiradi: mos video+audio juftlik
+        # bo'lmasa "Requested format is not available" bilan yiqiladi. Bizga faqat
+        # audio kerak, shu sabab video tanlovi umuman qatnashmasligi kerak.
+        "format": "bestaudio/best",
     }
     ytdlp_common.apply(opts)
     url = f"https://www.youtube.com/watch?v={video_id}"

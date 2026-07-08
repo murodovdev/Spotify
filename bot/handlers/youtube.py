@@ -19,7 +19,7 @@ from aiogram.types import CallbackQuery, FSInputFile, Message
 from bot import keyboards, store
 from bot.db import repo
 from bot.i18n import Texts, track_caption
-from bot.services import media, tg_limits, video_dl
+from bot.services import media, tg_limits, video_dl, ytdlp_common
 from bot.services.downloader import TooLarge, TrackNotFound
 from bot.services.spotify import Track
 
@@ -33,6 +33,7 @@ _ERR_TEXT = {
     "geo": "YT_ERR_GEO",
     "live": "YT_ERR_LIVE",
     "age": "YT_ERR_AGE",
+    "blocked": "YT_ERR_BLOCKED",
     "network": "YT_ERR_NETWORK",
     "generic": "YT_UNAVAILABLE",
 }
@@ -44,6 +45,29 @@ _inflight: set[tuple[int, int]] = set()
 
 def _err_text(t: Texts, reason: str) -> str:
     return getattr(t, _ERR_TEXT.get(reason, "YT_UNAVAILABLE"))
+
+
+def _log_yt_error(video_id: str, e: "video_dl.YTError") -> None:
+    """Xato sababini yozadi. `blocked` — operator muammosi, shuning uchun baland ovozda.
+
+    `blocked` deyarli har doim YOUTUBE_COOKIES eskirgani yoki yt-dlp yangilanishi
+    kerakligini bildiradi: YouTube data-markaz IP'sini bot deb hisoblaydi.
+    """
+    if e.reason == "blocked":
+        log.error(
+            "YouTube ekstraktor bloklandi (%s): cookies=%s yt-dlp=%s :: %s",
+            video_id, ytdlp_common.has_cookies(), _ytdlp_version(), e,
+        )
+    else:
+        log.warning("YouTube metadata %s: reason=%s :: %s", video_id, e.reason, e)
+
+
+def _ytdlp_version() -> str:
+    try:
+        import yt_dlp
+        return yt_dlp.version.__version__
+    except Exception:
+        return "?"
 
 
 def _hms(seconds: int) -> str:
@@ -124,6 +148,8 @@ async def _show_preview(message: Message, video_id: str, t: Texts) -> None:
     try:
         meta = await video_dl.get_yt_meta(video_id)
     except video_dl.YTError as e:
+        # Sababni yozmasak "mavjud emas" xabari sabab-siz qoladi va diagnostika imkonsiz.
+        _log_yt_error(video_id, e)
         await status.edit_text(_err_text(t, e.reason))
         return
     except Exception:
@@ -192,6 +218,7 @@ async def _run_format_download(
     try:
         meta = await video_dl.get_yt_meta(video_id)
     except video_dl.YTError as e:
+        _log_yt_error(video_id, e)
         await _fail(preview, _err_text(t, e.reason))
         return
     except Exception:
@@ -228,6 +255,7 @@ async def _run_format_download(
     except video_dl.YTTooLarge:
         await _offer_smaller(preview, video_id, fmt, meta.formats, t)
     except video_dl.YTError as e:
+        _log_yt_error(video_id, e)
         await _fail(preview, _err_text(t, e.reason))
     except Exception:
         log.exception("YouTube %s download failed: %s", fmt, video_id)

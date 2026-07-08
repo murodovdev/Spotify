@@ -156,6 +156,7 @@ class Texts:
     YT_ERR_LIVE: str
     YT_ERR_AGE: str
     YT_ERR_NETWORK: str
+    YT_ERR_BLOCKED: str
 
     # --- Video download ---
     VIDEO_DOWNLOADING: str
@@ -292,6 +293,7 @@ UZ = Texts(
     YT_ERR_LIVE="📡 Jonli efirlarni yuklab bo'lmaydi.",
     YT_ERR_AGE="🔞 Bu videoda yosh cheklovi bor.",
     YT_ERR_NETWORK="📡 Tarmoq xatosi. Qaytadan urinib ko'ring.",
+    YT_ERR_BLOCKED="⚠️ YouTube hozircha bu videoni bermayapti. Birozdan so'ng urinib ko'ring.",
 
     VIDEO_DOWNLOADING="📥 <i>{platform} yuklanmoqda…</i>",
     VIDEO_TOO_LARGE=(
@@ -589,6 +591,7 @@ EN = Texts(
     YT_ERR_LIVE="📡 Live streams can't be downloaded.",
     YT_ERR_AGE="🔞 This video is age-restricted.",
     YT_ERR_NETWORK="📡 Network error. Please try again.",
+    YT_ERR_BLOCKED="⚠️ YouTube is refusing this video right now. Please try again shortly.",
 
     VIDEO_DOWNLOADING="📥 <i>Downloading {platform}…</i>",
     VIDEO_TOO_LARGE=(
@@ -887,6 +890,7 @@ RU = Texts(
     YT_ERR_LIVE="📡 Прямые трансляции скачать нельзя.",
     YT_ERR_AGE="🔞 На видео возрастное ограничение.",
     YT_ERR_NETWORK="📡 Ошибка сети. Попробуйте снова.",
+    YT_ERR_BLOCKED="⚠️ YouTube сейчас не отдаёт это видео. Попробуйте чуть позже.",
 
     VIDEO_DOWNLOADING="📥 <i>Загружаю {platform}…</i>",
     VIDEO_TOO_LARGE=(
