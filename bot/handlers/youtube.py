@@ -1,12 +1,15 @@
 """YouTube link handler — extracts audio from YouTube videos and playlists.
 
 Standard videos show a thumbnail preview with a format picker (MP3 / M4A /
-FLAC / OPUS) and download nothing until the user taps a format. Shorts keep
-the legacy behaviour: the audio is extracted immediately at the user's
-configured bitrate.
+FLAC / OPUS) and download nothing until the user taps a format. Playlists
+render as a track list.
 
-Routing: this router must be registered BEFORE video.router so that YouTube
-URLs are handled as audio downloads rather than video downloads.
+Shorts are NOT handled here — they go to video.router and are delivered as a
+video with a 🎵 Find Music button, like every other social platform.
+
+Routing: this router is registered BEFORE video.router, so `_is_youtube_url`
+must reject Shorts in the filter; returning early from the handler would swallow
+the update instead of passing it on.
 """
 
 import html
@@ -20,7 +23,6 @@ from bot import keyboards, store
 from bot.db import repo
 from bot.i18n import Texts, track_caption
 from bot.services import media, tg_limits, video_dl, ytdlp_common
-from bot.services.downloader import TooLarge, TrackNotFound
 from bot.services.spotify import Track
 
 log = logging.getLogger(__name__)
@@ -77,7 +79,19 @@ def _hms(seconds: int) -> str:
 
 
 def _is_youtube_url(text: str) -> bool:
-    return video_dl.is_youtube_url(text)
+    """Oddiy YouTube videolari va playlistlar — Shorts emas.
+
+    Shorts video.router'da ijtimoiy tarmoq videosi sifatida qayta ishlanadi.
+    Bu router avval ro'yxatdan o'tgani uchun Shorts'ni **filtrda** rad etish
+    shart: handler ichida `return` qilsak, aiogram keyingi routerga o'tkazmaydi.
+
+    `youtube.com/playlist?list=…` (video id'siz) `is_youtube_url`ga tushmaydi —
+    shu sabab playlist id'si alohida tekshiriladi, aks holda faqat
+    `watch?v=…&list=…` ko'rinishidagi havolalar playlist deb qayta ishlanardi.
+    """
+    if video_dl.is_yt_shorts(text):
+        return False
+    return video_dl.is_youtube_url(text) or bool(video_dl.extract_yt_playlist_id(text))
 
 
 def _yt_track(meta: video_dl.YTVideoMeta) -> Track:
@@ -99,25 +113,6 @@ def _yt_track(meta: video_dl.YTVideoMeta) -> Track:
     )
 
 
-def _minimal_track(video_id: str) -> Track:
-    thumb = f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
-    mqthumb = f"https://i.ytimg.com/vi/{video_id}/mqdefault.jpg"
-    return Track(
-        id=f"yt:{video_id}",
-        title="",
-        artists="",
-        artist_id="",
-        album="",
-        album_id="",
-        duration=0,
-        cover_url=thumb,
-        thumb_url=mqthumb,
-        year="",
-        track_no=0,
-        video_id=video_id,
-    )
-
-
 # ─── Single video ────────────────────────────────────────────────────────────
 
 @router.message(F.text.func(_is_youtube_url))
@@ -133,11 +128,7 @@ async def handle_youtube_link(message: Message, t: Texts, bot: Bot) -> None:
     if not video_id:
         return
 
-    # Shorts — eski oqim (darhol audio). Oddiy videolar — format tanlash.
-    if video_dl.is_yt_shorts(text):
-        await _legacy_audio_flow(message, video_id, t, bot)
-    else:
-        await _show_preview(message, video_id, t)
+    await _show_preview(message, video_id, t)
 
 
 # ─── Preview + format tanlash (oddiy videolar) ───────────────────────────────
@@ -323,121 +314,6 @@ async def _delete(msg: Message) -> None:
         await msg.delete()
     except Exception:
         pass
-
-
-# ─── Legacy oqim (faqat Shorts) ──────────────────────────────────────────────
-
-async def _legacy_audio_flow(message: Message, video_id: str, t: Texts, bot: Bot) -> None:
-    status = await message.answer(t.YT_PROCESSING)
-
-    # Try to get metadata first (non-blocking, best-effort)
-    track: Track | None = None
-    try:
-        meta = await video_dl.extract_yt_meta(video_id)
-        track = _yt_track(meta)
-    except Exception:
-        log.debug("YouTube metadata extraction failed for %s, will get info during download", video_id)
-
-    if track is None:
-        track = _minimal_track(video_id)
-
-    store.remember([track])
-
-    # Show info card if we have metadata
-    if track.title:
-        esc = html.escape
-        info_text = (
-            f"▶️ <b>YouTube</b>\n"
-            f"🎵 <b>{esc(track.title)}</b>\n"
-            f"👤 {esc(track.artists)}"
-        )
-        if track.duration:
-            mins, secs = divmod(track.duration, 60)
-            info_text += f"\n⏱ {mins}:{secs:02d}"
-        info_text += f"\n\n{t.DOWNLOADING}"
-        try:
-            await status.edit_text(info_text)
-        except Exception:
-            pass
-    else:
-        try:
-            await status.edit_text(t.DOWNLOADING)
-        except Exception:
-            pass
-
-    user_id = message.from_user.id
-    bitrate = await repo.get_quality(user_id)
-
-    # Check cache
-    file_id = await repo.cache_get(track.id, bitrate)
-    if file_id:
-        is_fav = await repo.is_favorite(user_id, track.id)
-        await bot.send_audio(
-            chat_id=message.chat.id,
-            audio=file_id,
-            caption=track_caption(track),
-            reply_markup=keyboards.post_download_kb(track, t, is_fav),
-        )
-        await repo.incr("cache_hits")
-        await status.delete()
-        return
-
-    # Download audio
-    try:
-        with tempfile.TemporaryDirectory(prefix="ytdl_") as tmpdir:
-            res = await media.backend().download_track(track, bitrate, tmpdir)
-
-            # If metadata was missing, try to read title/artist from the downloaded MP3 tags
-            if not track.title:
-                track = _enrich_from_file(track, res.mp3_path)
-                store.remember([track])
-
-            thumb = FSInputFile(res.thumb_path) if res.thumb_path else None
-            is_fav = await repo.is_favorite(user_id, track.id)
-
-            msg = await bot.send_audio(
-                chat_id=message.chat.id,
-                audio=FSInputFile(res.mp3_path),
-                title=track.title or None,
-                performer=track.artists or None,
-                duration=track.duration or None,
-                thumbnail=thumb,
-                caption=track_caption(track),
-                reply_markup=keyboards.post_download_kb(track, t, is_fav),
-            )
-
-            if msg.audio:
-                await repo.cache_put(
-                    track.id, bitrate, msg.audio.file_id,
-                    track.title, track.artists,
-                )
-
-        await repo.incr("downloads")
-        await status.delete()
-
-    except TrackNotFound:
-        await status.edit_text(t.YT_UNAVAILABLE)
-    except TooLarge:
-        name = html.escape(track.full_name) if track.title else "YouTube video"
-        await status.edit_text(t.ERR_TOO_LARGE.format(name=name))
-    except Exception:
-        log.exception("YouTube audio download failed: %s", video_id)
-        await status.edit_text(t.YT_UNAVAILABLE)
-
-
-def _enrich_from_file(track: Track, mp3_path: str) -> Track:
-    """Try to read title/artist from MP3 ID3 tags written by yt-dlp."""
-    try:
-        from mutagen.id3 import ID3
-        tags = ID3(mp3_path)
-        title = str(tags.get("TIT2", "")) or ""
-        artist = str(tags.get("TPE1", "")) or ""
-        if title or artist:
-            from dataclasses import replace
-            return replace(track, title=title or track.title, artists=artist or track.artists)
-    except Exception:
-        pass
-    return track
 
 
 # ─── Playlist ────────────────────────────────────────────────────────────────

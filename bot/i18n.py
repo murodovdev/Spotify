@@ -160,6 +160,8 @@ class Texts:
 
     # --- Video download ---
     VIDEO_DOWNLOADING: str
+    VIDEO_CAPTION: str
+    VIDEO_DISABLED: str
     VIDEO_TOO_LARGE: str
     VIDEO_PRIVATE: str
     VIDEO_ERROR: str
@@ -201,7 +203,7 @@ UZ = Texts(
         "▶️ <b>YouTube havolasi</b>\n"
         "Video havolasini yuboring — format tanlang (MP3, M4A, FLAC, OPUS). Playlist ham qo'llab-quvvatlanadi.\n\n"
         "📹 <b>Ijtimoiy tarmoq videosi</b>\n"
-        "Instagram, TikTok, Facebook, X, Pinterest yoki Vimeo havolasi — video yuklanadi, "
+        "YouTube Shorts, Instagram, TikTok, Facebook, X, Pinterest yoki Vimeo havolasi — video yuklanadi, "
         "so'ng 🎵 tugmasi bilan undagi musiqani aniqlash mumkin.\n\n"
         "🎵 <b>Musiqani aniqlash</b>\n"
         "Audio, ovozli xabar, video yoki dumaloq video yuboring — bot qo'shiqni avtomatik aniqlaydi.\n\n"
@@ -296,6 +298,8 @@ UZ = Texts(
     YT_ERR_BLOCKED="⚠️ YouTube hozircha bu videoni bermayapti. Birozdan so'ng urinib ko'ring.",
 
     VIDEO_DOWNLOADING="📥 <i>{platform} yuklanmoqda…</i>",
+    VIDEO_CAPTION="📥 @track_drop_bot orqali yuklandi 🚀",
+    VIDEO_DISABLED="🎬 Video yuklash vaqtincha o'chirilgan.",
     VIDEO_TOO_LARGE=(
         "⚠️ <b>Video juda katta</b>\n"
         "Telegram 50 MB dan katta videoni qabul qilmaydi."
@@ -499,7 +503,7 @@ EN = Texts(
         "▶️ <b>YouTube link</b>\n"
         "Send a video link and pick a format (MP3, M4A, FLAC, OPUS). Playlists are supported too.\n\n"
         "📹 <b>Social media video</b>\n"
-        "Instagram, TikTok, Facebook, X, Pinterest or Vimeo link — the video is downloaded, "
+        "YouTube Shorts, Instagram, TikTok, Facebook, X, Pinterest or Vimeo link — the video is downloaded, "
         "then the 🎵 button identifies the music in it.\n\n"
         "🎵 <b>Music Recognition</b>\n"
         "Send any audio, voice message, video or round video — the bot will identify the song automatically.\n\n"
@@ -594,6 +598,8 @@ EN = Texts(
     YT_ERR_BLOCKED="⚠️ YouTube is refusing this video right now. Please try again shortly.",
 
     VIDEO_DOWNLOADING="📥 <i>Downloading {platform}…</i>",
+    VIDEO_CAPTION="📥 Downloaded via @track_drop_bot 🚀",
+    VIDEO_DISABLED="🎬 Video download is temporarily disabled.",
     VIDEO_TOO_LARGE=(
         "⚠️ <b>Video too large</b>\n"
         "Telegram can't send videos over 50 MB."
@@ -798,7 +804,7 @@ RU = Texts(
         "▶️ <b>Ссылка YouTube</b>\n"
         "Отправьте ссылку на видео и выберите формат (MP3, M4A, FLAC, OPUS). Плейлисты тоже поддерживаются.\n\n"
         "📹 <b>Видео из соцсетей</b>\n"
-        "Ссылка на Instagram, TikTok, Facebook, X, Pinterest или Vimeo — видео скачается, "
+        "Ссылка на YouTube Shorts, Instagram, TikTok, Facebook, X, Pinterest или Vimeo — видео скачается, "
         "а кнопка 🎵 распознает музыку из него.\n\n"
         "🎵 <b>Распознавание музыки</b>\n"
         "Отправьте аудио, голосовое сообщение, видео или кружок — бот автоматически определит песню.\n\n"
@@ -893,6 +899,8 @@ RU = Texts(
     YT_ERR_BLOCKED="⚠️ YouTube сейчас не отдаёт это видео. Попробуйте чуть позже.",
 
     VIDEO_DOWNLOADING="📥 <i>Загружаю {platform}…</i>",
+    VIDEO_CAPTION="📥 Скачано через @track_drop_bot 🚀",
+    VIDEO_DISABLED="🎬 Загрузка видео временно отключена.",
     VIDEO_TOO_LARGE=(
         "⚠️ <b>Видео слишком большое</b>\n"
         "Telegram не принимает видео больше 50 МБ."

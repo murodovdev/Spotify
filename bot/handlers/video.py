@@ -1,12 +1,16 @@
 """Social media video link handler.
 
-Detects links to Instagram, TikTok, YouTube/Shorts, Facebook, X/Twitter,
+Detects links to YouTube Shorts, Instagram, TikTok, Facebook, X/Twitter,
 Pinterest and Vimeo in any incoming text message. Downloads the video, sends
-it to the chat, then attaches a 🎵 Find Music button that triggers Shazam
-recognition on the video's audio track.
+it as a native streaming Telegram video with a minimal caption, then attaches a
+🎵 Find Music button that triggers Shazam recognition on the video's audio track.
 
-Routing note: this router must be registered BEFORE search.router so that
-social media URLs are not treated as plain-text search queries.
+The flow is identical on every platform: same caption, same single button.
+
+Routing notes:
+* Registered BEFORE search.router, so social URLs are not treated as search queries.
+* Registered AFTER youtube.router. Full-length YouTube videos and playlists belong
+  to that router (audio format picker); only Shorts land here.
 """
 
 import html
@@ -39,8 +43,12 @@ def _has_video_url(text: str) -> bool:
     pair = video_dl.extract_video_url(text)
     if not pair:
         return False
-    # YouTube URLs are handled by youtube.router (audio extraction)
-    return pair[1] != "YouTube"
+    # Oddiy YouTube videolari va playlistlar youtube.router'da (audio format tanlash).
+    # Shorts esa boshqa ijtimoiy tarmoq videolari bilan bir xil oqimda: video +
+    # 🎵 Musiqani topish.
+    if pair[1] == "YouTube":
+        return video_dl.is_yt_shorts(text)
+    return True
 
 
 @router.message(F.text.func(_has_video_url))
@@ -49,7 +57,7 @@ async def handle_video_link(message: Message, t: Texts, bot: Bot) -> None:
     if not pair:
         return
     if not settings_store.feature_enabled("video"):
-        await message.answer("🎬 Video download is temporarily disabled.")
+        await message.answer(t.VIDEO_DISABLED)
         return
 
     url, platform = pair
@@ -59,25 +67,15 @@ async def handle_video_link(message: Message, t: Texts, bot: Bot) -> None:
     try:
         with tempfile.TemporaryDirectory(prefix="vidl_") as tmpdir:
             info = await media.backend().download_video(url, platform, tmpdir)
-
             token = store.stash_video(url)
-            esc = html.escape
-
-            caption_lines = [f"{icon} <b>{esc(platform)}</b>"]
-            if info.title:
-                title_short = info.title[:80] + ("…" if len(info.title) > 80 else "")
-                caption_lines.append(f"🎬 {esc(title_short)}")
-            if info.duration:
-                mins, secs = divmod(info.duration, 60)
-                caption_lines.append(f"⏱ {mins}:{secs:02d}")
-
-            caption = "\n".join(caption_lines)
 
             await status.delete()
+            # Izoh ataylab minimal: manba havolasi, sarlavha, davomiylik yoki
+            # texnik tafsilotlar yo'q. Barcha platformalarda bir xil ko'rinish.
             await bot.send_video(
                 message.chat.id,
                 video=FSInputFile(info.video_path),
-                caption=caption,
+                caption=t.VIDEO_CAPTION,
                 duration=info.duration or None,
                 reply_markup=keyboards.video_result_kb(token, t),
                 supports_streaming=True,
