@@ -149,7 +149,7 @@ async def download(track: Track, bitrate: str, tmpdir: str) -> Downloaded:
         bitrate = "128"
 
     cover_url, thumb_url = track.cover_url, track.thumb_url
-    if not cover_url and not track.id.startswith("yt:"):
+    if not cover_url and not track.id.startswith(("yt:", "it:", "dz:")):
         cover_url = thumb_url = await spotify.oembed_thumb(track.id)
 
     async with _download_sem:

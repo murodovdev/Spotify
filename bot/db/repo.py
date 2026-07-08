@@ -173,6 +173,22 @@ async def cache_any_row(spotify_id: str):
     return await cur.fetchone()
 
 
+async def any_meta_row(spotify_id: str):
+    """Trek nomi/ijrochisi — keshdan, bo'lmasa sevimlilardan.
+
+    Bot qayta ishga tushgach xotiradagi qidiruv natijalari yo'qoladi; sevimlilar
+    jadvalida esa title/artist saqlanadi va trekni shular orqali tiklash mumkin.
+    """
+    row = await cache_any_row(spotify_id)
+    if row and (row["title"] or row["artist"]):
+        return row
+    cur = await db().execute(
+        "SELECT title, artist FROM favorites WHERE spotify_id=? LIMIT 1",
+        (spotify_id,),
+    )
+    return await cur.fetchone() or row
+
+
 async def cache_put(spotify_id: str, bitrate: str, file_id: str, title: str, artist: str) -> None:
     await db().execute(
         """INSERT INTO track_cache(spotify_id, bitrate, file_id, title, artist, last_used)

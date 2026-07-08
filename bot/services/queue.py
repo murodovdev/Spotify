@@ -130,9 +130,9 @@ async def _resolve_track(track_id: str) -> Track | None:
     track = store.get(track_id)
     if track is not None:
         return track
-    # 2) YouTube treki — keshdan title/artist tiklaymiz, video_id id'dan.
+    # 2) YouTube treki — keshdan/sevimlilardan title/artist tiklaymiz, video_id id'dan.
     if track_id.startswith("yt:"):
-        row = await repo.cache_any_row(track_id)
+        row = await repo.any_meta_row(track_id)
         if row is None:
             return None
         return Track(
@@ -141,9 +141,18 @@ async def _resolve_track(track_id: str) -> Track | None:
             cover_url="", thumb_url="", year="", track_no=0,
             video_id=track_id[3:],
         )
-    # 3) Boshqa sintetik provayder id'lari faqat xotirada yashaydi — eskirgan bo'lsa yo'q.
+    # 3) Sintetik provayder id'lari (iTunes/Deezer) xotirada yashaydi. Xotira bo'sh
+    #    bo'lsa (bot qayta ishga tushgan) — nomi bo'yicha tiklaymiz: sevimlilar va
+    #    kesh yozuvlarida title/artist bor, downloader esa YouTube'dan topib beradi.
     if track_id.startswith(("it:", "dz:")):
-        return None
+        row = await repo.any_meta_row(track_id)
+        if row is None or not (row["title"] or row["artist"]):
+            return None
+        return Track(
+            id=track_id, title=row["title"] or "", artists=row["artist"] or "",
+            artist_id="", album="", album_id="", duration=0,
+            cover_url="", thumb_url="", year="", track_no=0,
+        )
     # 4) Haqiqiy Spotify trek id'si (havoladan) — rasmiy/embed orqali olamiz.
     return await spotify.track(track_id)
 
