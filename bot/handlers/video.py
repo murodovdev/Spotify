@@ -19,7 +19,7 @@ from aiogram.types import CallbackQuery, FSInputFile, Message
 from bot import keyboards, store
 from bot.admin import settings_store
 from bot.i18n import Texts
-from bot.services import recognizer, search_engine, video_dl
+from bot.services import media, recognizer, search_engine, video_dl
 
 log = logging.getLogger(__name__)
 router = Router(name="video")
@@ -58,7 +58,7 @@ async def handle_video_link(message: Message, t: Texts, bot: Bot) -> None:
 
     try:
         with tempfile.TemporaryDirectory(prefix="vidl_") as tmpdir:
-            info = await video_dl.download_video(url, platform, tmpdir)
+            info = await media.backend().download_video(url, platform, tmpdir)
 
             token = store.stash_video(url)
             esc = html.escape
@@ -115,7 +115,7 @@ async def cb_find_music(cq: CallbackQuery, t: Texts) -> None:
 
     try:
         with tempfile.TemporaryDirectory(prefix="vidrecog_") as tmpdir:
-            audio_path = await video_dl.download_audio(url, tmpdir)
+            audio_path = await media.backend().extract_audio(url, tmpdir)
             result = await recognizer.recognize(audio_path)
     except Exception:
         log.exception("Find-music pipeline failed: %s", url)

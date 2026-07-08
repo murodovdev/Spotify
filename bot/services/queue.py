@@ -15,7 +15,7 @@ from bot import keyboards, store
 from bot.admin import repo as admin_repo
 from bot.db import repo
 from bot.i18n import Texts, progress_bar, track_caption
-from bot.services import downloader
+from bot.services import media
 from bot.services.downloader import Downloaded, TooLarge, TrackNotFound
 from bot.services.spotify import Track, spotify
 
@@ -173,7 +173,7 @@ async def process_single(bot: Bot, chat_id: int, user_id: int, track_id: str, t:
         else:
             await _safe_edit(status, t.DOWNLOADING)
             with tempfile.TemporaryDirectory(prefix="spdl_") as tmp:
-                res = await downloader.download(track, bitrate, tmp)
+                res = await media.backend().download_track(track, bitrate, tmp)
                 msg = await _send_file(bot, chat_id, user_id, res, track, t, full_kb=True)
                 if msg.audio:
                     await repo.cache_put(
@@ -227,7 +227,7 @@ async def process_collection(
                 return "skip", None
             tmp = tempfile.TemporaryDirectory(prefix="spdl_")
             try:
-                res = await downloader.download(track, bitrate, tmp.name)
+                res = await media.backend().download_track(track, bitrate, tmp.name)
                 return "file", (tmp, res)
             except TrackNotFound:
                 tmp.cleanup()

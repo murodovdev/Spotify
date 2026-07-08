@@ -20,6 +20,12 @@ class Settings(BaseSettings):
     port: int = 8080
     lastfm_api_key: str = ""
 
+    # Og'ir media ishlari qayerda bajariladi: "local" (jarayon ichida yt-dlp +
+    # ffmpeg) yoki "remote" (VPS media serveri — Phase 1, hali tayyor emas).
+    media_backend: str = "local"
+    media_server_url: str = ""
+    media_server_secret: str = ""
+
     @property
     def database_path(self) -> str:
         """DB fayl yo'li. Aniq DB_PATH berilmasa: Railway'da volume (/data),

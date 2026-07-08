@@ -51,6 +51,11 @@ The core logic, independent of the Telegram layer:
   effects.
 - **`ytdlp_common.py`** — shared `yt-dlp` options, including cookie injection.
 - **`tempsweep.py`** — background cleanup of temporary files.
+- **`media/`** — the boundary for all heavy media work (`MediaBackend`). Today
+  `LocalBackend` runs `yt-dlp`/`ffmpeg` in-process; a remote backend will run
+  them on a dedicated VPS. See [HYBRID_MIGRATION.md](HYBRID_MIGRATION.md).
+  Handlers must never call `downloader`/`video_dl` download functions directly —
+  such a call would stay on Railway when processing moves off-box.
 
 ### `db/`
 SQLite via `aiosqlite`. Stores users, the Telegram `file_id` cache, download

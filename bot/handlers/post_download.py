@@ -27,7 +27,7 @@ from bot import keyboards, store
 from bot.admin import settings_store
 from bot.db import repo
 from bot.i18n import Texts, track_caption
-from bot.services import audio_effects, downloader, recommender
+from bot.services import audio_effects, downloader, media, recommender
 from bot.services.spotify import Track, spotify
 
 log = logging.getLogger(__name__)
@@ -85,7 +85,7 @@ async def _get_audio_path(bot: Bot, track: Track, bitrate: str, tmpdir: str) -> 
             log.debug("Bot API download failed for %s, falling back to YT", track.id)
 
     try:
-        res = await downloader.download(track, bitrate, tmpdir)
+        res = await media.backend().download_track(track, bitrate, tmpdir)
         return res.mp3_path
     except Exception:
         log.exception("YT re-download failed: %s", track.id)

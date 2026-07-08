@@ -19,7 +19,7 @@ from aiogram.types import CallbackQuery, FSInputFile, Message
 from bot import keyboards, store
 from bot.db import repo
 from bot.i18n import Texts, track_caption
-from bot.services import downloader, video_dl
+from bot.services import media, video_dl
 from bot.services.downloader import TooLarge, TrackNotFound
 from bot.services.spotify import Track
 
@@ -212,7 +212,7 @@ async def _run_format_download(
 
     try:
         with tempfile.TemporaryDirectory(prefix="ytfmt_") as tmpdir:
-            path = await video_dl.download_yt_audio(video_id, fmt, tmpdir)
+            path = await media.backend().download_yt_audio(video_id, fmt, tmpdir)
             msg = await _send_ready(
                 bot, chat_id, user_id, None, path, track, fmt, t
             )
@@ -335,7 +335,7 @@ async def _legacy_audio_flow(message: Message, video_id: str, t: Texts, bot: Bot
     # Download audio
     try:
         with tempfile.TemporaryDirectory(prefix="ytdl_") as tmpdir:
-            res = await downloader.download(track, bitrate, tmpdir)
+            res = await media.backend().download_track(track, bitrate, tmpdir)
 
             # If metadata was missing, try to read title/artist from the downloaded MP3 tags
             if not track.title:
