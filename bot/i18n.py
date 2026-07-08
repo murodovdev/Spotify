@@ -1179,7 +1179,6 @@ def track_caption(track) -> str:
     """Trek uchun ma'lumot kartasi (audio ostidagi izoh).
 
     Faqat mavjud maydonlar ko'rsatiladi — bo'sh janr/yil/albom yozilmaydi.
-    Oxirgi <code> qatori Telegram'da bir bosishda nusxalanadi.
     """
     esc = html.escape
     lines = [f"🎵 <b>{esc(track.title)}</b>"]
@@ -1199,5 +1198,4 @@ def track_caption(track) -> str:
     if meta:
         lines.append(" · ".join(meta))
 
-    lines.append(f"<code>{esc(track.artists)} — {esc(track.title)}</code>")
     return "\n".join(lines)
