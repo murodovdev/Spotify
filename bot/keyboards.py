@@ -193,11 +193,16 @@ def post_download_kb(track, t: Texts, is_fav: bool = False) -> InlineKeyboardMar
     )
 
     # Row 2: Similar Songs + Edit Audio + Edit Info
-    kb.row(
-        InlineKeyboardButton(text=t.BTN_SIMILAR, callback_data=f"sim:{track.id}"),
-        InlineKeyboardButton(text=t.BTN_EFFECTS, callback_data=f"ea:{track.id}"),
-        InlineKeyboardButton(text=t.BTN_EDIT_META, callback_data=f"em:{track.id}"),
-    )
+    #
+    # YouTube audiosi ko'pincha musiqa emas (vlog, podkast, sharh) — "O'xshash"
+    # tavsiyasi bunday yozuvlar uchun ma'nosiz: tavsiya dvigateli sarlavha va
+    # ijrochi (= kanal nomi) bo'yicha qidiradi va axlat qaytaradi.
+    row = []
+    if not str(track.id).startswith("yt:"):
+        row.append(InlineKeyboardButton(text=t.BTN_SIMILAR, callback_data=f"sim:{track.id}"))
+    row.append(InlineKeyboardButton(text=t.BTN_EFFECTS, callback_data=f"ea:{track.id}"))
+    row.append(InlineKeyboardButton(text=t.BTN_EDIT_META, callback_data=f"em:{track.id}"))
+    kb.row(*row)
 
     # Row 3: Album (if available)
     if track.album_id:

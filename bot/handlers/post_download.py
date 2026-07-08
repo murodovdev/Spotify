@@ -180,6 +180,11 @@ async def cb_similar(cq: CallbackQuery, t: Texts) -> None:
         await cq.answer("⚠️ Temporarily unavailable.", show_alert=True)
         return
     track_id = cq.data[4:]
+    # YouTube audiosi uchun tugma endi ko'rsatilmaydi, lekin eski xabarlardagi
+    # tugma hamon bosilishi mumkin — jim e'tiborsiz qoldiramiz.
+    if track_id.startswith("yt:"):
+        await cq.answer()
+        return
     track = await _resolve_track(track_id)
     if not track:
         await cq.answer(t.ERR_EXPIRED, show_alert=True)
