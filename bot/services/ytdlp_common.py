@@ -21,14 +21,18 @@ import tempfile
 
 log = logging.getLogger(__name__)
 
-# Klient tanlash format ro'yxatiga ta'sir qiladi. `web`/`mweb` PO token talab
-# qiladi va token'siz formatlarni "mavjud emas" deb belgilaydi ("Requested
-# format is not available"). `web_safari` cookie bilan to'liq format beradi va
-# yosh-cheklovini ochadi; `android`/`tv` — zaxira, ular ham progressiv format
-# beradi. Cookie "bot" tekshiruvini hал qiladi, shuning uchun cookie bo'lsa
-# bloklanadigan klientlarни ham ishlatsa bo'ladi.
-_CLIENTS_WITH_COOKIES = ["web_safari", "android", "tv"]
-_CLIENTS_NO_COOKIES = ["web_safari", "tv", "mweb"]
+# Klient tanlash format ro'yxatiga ta'sir qiladi. PO token talab qiladigan
+# klientlar (`web`, `mweb`, `web_safari`, `tv`, `ios`, `android`) token'siz
+# **audio oqimlarini umuman bermaydi** — yt-dlp esa buni "Requested format is
+# not available" deb ko'rsatadi. Bu videoning aybi emas.
+#
+# 2026-07-08 da o'lchandi (dQw4w9WgXcQ, cookie'siz), audio oqimlar soni:
+#   android_vr = 5, tv_embedded = 5, android = 1, qolganlari = 0.
+# Shu sabab PO token talab qilmaydigan `android_vr` va `tv_embedded` birinchi
+# turadi; qolganlari zaxira (yt-dlp barcha klientlar formatlarini birlashtiradi).
+# Cookie "bot" tekshiruvini hal qiladi, lekin PO token muammosini emas.
+_CLIENTS_WITH_COOKIES = ["android_vr", "tv_embedded", "web_safari", "tv"]
+_CLIENTS_NO_COOKIES = ["android_vr", "tv_embedded", "tv", "mweb"]
 
 _cookie_path: str | None = None
 _cookie_resolved = False
