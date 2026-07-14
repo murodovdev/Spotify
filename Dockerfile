@@ -3,7 +3,7 @@ FROM python:3.12-slim
 # FFmpeg is required for audio transcoding.
 # Deno is required by yt-dlp ≥2026.07 for YouTube signature/n-challenge solving.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ffmpeg curl unzip \
+    && apt-get install -y --no-install-recommends ffmpeg aria2 curl unzip \
     && curl -fsSL https://github.com/denoland/deno/releases/latest/download/deno-x86_64-unknown-linux-gnu.zip -o /tmp/deno.zip \
     && unzip /tmp/deno.zip -d /usr/local/bin/ \
     && rm /tmp/deno.zip \

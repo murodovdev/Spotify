@@ -17,7 +17,7 @@ from bot.services import tg_limits, ytdlp_common
 
 log = logging.getLogger(__name__)
 
-_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="video_dl")
+_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="video_dl")
 
 _YT_RE = re.compile(
     r"(?:https?://)?(?:(?:www\.|music\.)?youtube\.com/"
@@ -120,12 +120,10 @@ def _ydl_download_video(url: str, tmpdir: str) -> VideoInfo:
     """Blocking yt-dlp download. Raises ValueError / FileNotFoundError on failure."""
     import yt_dlp  # type: ignore[import]
 
-    # Prefer 720p MP4 to keep file size manageable; fall back to best available.
     fmt = (
-        "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]"
-        "/bestvideo[height<=720]+bestaudio"
-        "/best[height<=720][ext=mp4]"
-        "/best[height<=720]"
+        "bestvideo[ext=mp4]+bestaudio[ext=m4a]"
+        "/bestvideo+bestaudio"
+        "/best[ext=mp4]"
         "/best"
     )
 
