@@ -31,7 +31,7 @@ log = logging.getLogger(__name__)
 # Shu sabab PO token talab qilmaydigan `android_vr` va `tv_embedded` birinchi
 # turadi; qolganlari zaxira (yt-dlp barcha klientlar formatlarini birlashtiradi).
 # Cookie "bot" tekshiruvini hal qiladi, lekin PO token muammosini emas.
-_CLIENTS_WITH_COOKIES = ["android_vr", "tv_embedded", "web_safari", "tv"]
+_CLIENTS_WITH_COOKIES = ["android_vr", "tv_embedded", "tv"]
 _CLIENTS_NO_COOKIES = ["android_vr", "tv_embedded", "tv", "mweb"]
 
 _cookie_path: str | None = None
