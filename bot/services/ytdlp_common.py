@@ -21,16 +21,14 @@ import tempfile
 
 log = logging.getLogger(__name__)
 
-# yt-dlp 2026.07+ holatida klient mosligi (deno o'rnatilgan):
-#   web         — cookies + deno bilan to'liq ishlaydi (signature solving)
-#   android_vr  — cookies'siz ishlaydi, signature solving kerak emas
-#   android     — SABR eksperimenti tufayli faqat format 18 berishi mumkin
+# yt-dlp 2026.07+ (deno o'rnatilgan):
+#   android_vr — cookies'siz ishlaydi, barcha formatlar (m4a, opus, video)
+#                cookies BERILSA yt-dlp uni skip qiladi ("does not support cookies")
+#   web        — cookies bilan SABR-only bo'lib qoldi (URL bermaydi)
 #
-# Cookies bilan: `web` asosiy (deno signature'ni hal qiladi, cookies bot-check'ni),
-# `android_vr` zaxira (cookies qo'llab-quvvatlamaydi, lekin formatlar beradi).
-# Cookies'siz: `android_vr` yagona ishonchli variant.
-_CLIENTS_WITH_COOKIES = ["web", "android_vr"]
-_CLIENTS_NO_COOKIES = ["android_vr"]
+# Strategiya: cookies ishlatmaymiz, `android_vr` + deno yetarli.
+# Data-center IP bloklansa, cookies alohida tekshiriladi (pastga qarang).
+_CLIENTS = ["android_vr"]
 
 _cookie_path: str | None = None
 _cookie_resolved = False
@@ -75,13 +73,11 @@ def has_cookies() -> bool:
 
 
 def apply(opts: dict) -> dict:
-    """yt-dlp opts'ga cookie va player_client sozlamalarini qo'shadi (idempotent)."""
-    cookie = _resolve_cookie_file()
-    if cookie:
-        opts.setdefault("cookiefile", cookie)
-        clients = _CLIENTS_WITH_COOKIES
-    else:
-        clients = _CLIENTS_NO_COOKIES
+    """yt-dlp opts'ga player_client sozlamalarini qo'shadi (idempotent).
+
+    Cookies ataylab ishlatilMAYDI: android_vr klienti cookies berilsa
+    skip qilinadi, web klienti esa SABR-only bo'lib qolgan.
+    """
     ea = opts.setdefault("extractor_args", {})
-    ea.setdefault("youtube", {}).setdefault("player_client", list(clients))
+    ea.setdefault("youtube", {}).setdefault("player_client", list(_CLIENTS))
     return opts
