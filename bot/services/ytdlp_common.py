@@ -21,18 +21,16 @@ import tempfile
 
 log = logging.getLogger(__name__)
 
-# yt-dlp 2026.07 holatida klient mosligi:
-#   android_vr  — cookies bilan ishlamaydi ("does not support cookies")
-#   tv_embedded — endi "unsupported client" deb o'tkazib yuboriladi
-#   tv          — SABR-only (URL bermaydi, faqat SABR oqimlari)
-#   web/mweb    — PO token talab qiladi, token'siz audio bermaydi
-#   android     — cookies'siz ham ishlaydi, lekin SABR eksperimenti tushishi mumkin
+# yt-dlp 2026.07+ holatida klient mosligi (deno o'rnatilgan):
+#   web         — cookies + deno bilan to'liq ishlaydi (signature solving)
+#   android_vr  — cookies'siz ishlaydi, signature solving kerak emas
+#   android     — SABR eksperimenti tufayli faqat format 18 berishi mumkin
 #
-# Strategiya: `android` asosiy klient, `web` cookies bilan zaxira (cookies
-# bot-check'ni hal qiladi). Cookies invalide bo'lsa yt-dlp warning beradi
-# lekin android orqali davom etadi.
-_CLIENTS_WITH_COOKIES = ["android", "web"]
-_CLIENTS_NO_COOKIES = ["android"]
+# Cookies bilan: `web` asosiy (deno signature'ni hal qiladi, cookies bot-check'ni),
+# `android_vr` zaxira (cookies qo'llab-quvvatlamaydi, lekin formatlar beradi).
+# Cookies'siz: `android_vr` yagona ishonchli variant.
+_CLIENTS_WITH_COOKIES = ["web", "android_vr"]
+_CLIENTS_NO_COOKIES = ["android_vr"]
 
 _cookie_path: str | None = None
 _cookie_resolved = False
