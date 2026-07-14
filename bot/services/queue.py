@@ -21,7 +21,7 @@ from bot.services.spotify import Track, spotify
 
 log = logging.getLogger(__name__)
 
-PARALLEL_PER_USER = 3
+PARALLEL_PER_USER = 6
 
 
 @dataclass
@@ -307,7 +307,7 @@ async def process_collection(
                             reply_markup=keyboards.cancel_button(user_id, t),
                         )
                         last_edit = now
-                    await asyncio.sleep(0.3)
+                    await asyncio.sleep(0.05)
             finally:
                 # Iste'mol qilinmagan tasklarni (cancel/break) tozalaymiz —
                 # tugaganlarning temp papkasini o'chiramiz, qolganini bekor.

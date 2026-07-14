@@ -20,7 +20,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 ENV PYTHONUNBUFFERED=1 \
-    MAX_DOWNLOADS=4 \
+    MAX_DOWNLOADS=8 \
     PORT=8080
 
 EXPOSE 8080

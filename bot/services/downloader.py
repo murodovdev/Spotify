@@ -24,7 +24,7 @@ log = logging.getLogger(__name__)
 # bot/services/tg_limits.py ga qarang.
 LONG_TRACK_SECONDS = 1200
 
-_MAX_CONCURRENT = int(os.getenv("MAX_DOWNLOADS", "4"))
+_MAX_CONCURRENT = int(os.getenv("MAX_DOWNLOADS", "8"))
 _download_sem = asyncio.Semaphore(_MAX_CONCURRENT)
 _executor = ThreadPoolExecutor(max_workers=_MAX_CONCURRENT, thread_name_prefix="dl")
 

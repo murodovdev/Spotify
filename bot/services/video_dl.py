@@ -17,7 +17,7 @@ from bot.services import tg_limits, ytdlp_common
 
 log = logging.getLogger(__name__)
 
-_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="video_dl")
+_executor = ThreadPoolExecutor(max_workers=8, thread_name_prefix="video_dl")
 
 _YT_RE = re.compile(
     r"(?:https?://)?(?:(?:www\.|music\.)?youtube\.com/"
