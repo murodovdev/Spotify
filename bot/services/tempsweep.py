@@ -18,7 +18,6 @@ import time
 log = logging.getLogger(__name__)
 
 # Loyihaning barcha TemporaryDirectory prefikslari (downloader, handlers, video).
-# `yt_cookies_` ATAYIN yo'q — cookie fayli faol, supurilmasligi kerak.
 _PREFIXES = ("spdl_", "ytdl_", "vidl_", "vidrecog_", "recog_")
 
 # Shundan eski orphanlar o'chiriladi. Bitta yuklab olish hech qachon bunchalik

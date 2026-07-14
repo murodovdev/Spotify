@@ -22,7 +22,7 @@ from aiogram.types import CallbackQuery, FSInputFile, Message
 from bot import keyboards, store
 from bot.db import repo
 from bot.i18n import Texts, track_caption
-from bot.services import media, tg_limits, video_dl, ytdlp_common
+from bot.services import media, tg_limits, video_dl
 from bot.services.spotify import Track
 
 log = logging.getLogger(__name__)
@@ -50,15 +50,11 @@ def _err_text(t: Texts, reason: str) -> str:
 
 
 def _log_yt_error(video_id: str, e: "video_dl.YTError") -> None:
-    """Xato sababini yozadi. `blocked` — operator muammosi, shuning uchun baland ovozda.
-
-    `blocked` deyarli har doim YOUTUBE_COOKIES eskirgani yoki yt-dlp yangilanishi
-    kerakligini bildiradi: YouTube data-markaz IP'sini bot deb hisoblaydi.
-    """
+    """Xato sababini yozadi. `blocked` — operator muammosi, shuning uchun baland ovozda."""
     if e.reason == "blocked":
         log.error(
-            "YouTube ekstraktor bloklandi (%s): cookies=%s yt-dlp=%s :: %s",
-            video_id, ytdlp_common.has_cookies(), _ytdlp_version(), e,
+            "YouTube ekstraktor bloklandi (%s): yt-dlp=%s :: %s",
+            video_id, _ytdlp_version(), e,
         )
     else:
         log.warning("YouTube metadata %s: reason=%s :: %s", video_id, e.reason, e)

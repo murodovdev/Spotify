@@ -75,8 +75,6 @@ def _ydl_download(video_id: str, tmpdir: str, bitrate: str) -> str:
         "retries": 3,
         "socket_timeout": 20,
     }
-    # Cookie + chidamli player_client — data-markaz IP'lardagi "bot" tekshiruvi
-    # va yosh-cheklovini chetlab o'tish uchun (bot/services/ytdlp_common.py).
     ytdlp_common.apply(opts)
     ffmpeg_loc = _ffmpeg_location()
     if ffmpeg_loc:
