@@ -21,18 +21,18 @@ import tempfile
 
 log = logging.getLogger(__name__)
 
-# Klient tanlash format ro'yxatiga ta'sir qiladi. PO token talab qiladigan
-# klientlar (`web`, `mweb`, `web_safari`, `tv`, `ios`, `android`) token'siz
-# **audio oqimlarini umuman bermaydi** — yt-dlp esa buni "Requested format is
-# not available" deb ko'rsatadi. Bu videoning aybi emas.
+# yt-dlp 2026.07 holatida klient mosligi:
+#   android_vr  — cookies bilan ishlamaydi ("does not support cookies")
+#   tv_embedded — endi "unsupported client" deb o'tkazib yuboriladi
+#   tv          — SABR-only (URL bermaydi, faqat SABR oqimlari)
+#   web/mweb    — PO token talab qiladi, token'siz audio bermaydi
+#   android     — cookies'siz ham ishlaydi, lekin SABR eksperimenti tushishi mumkin
 #
-# 2026-07-08 da o'lchandi (dQw4w9WgXcQ, cookie'siz), audio oqimlar soni:
-#   android_vr = 5, tv_embedded = 5, android = 1, qolganlari = 0.
-# Shu sabab PO token talab qilmaydigan `android_vr` va `tv_embedded` birinchi
-# turadi; qolganlari zaxira (yt-dlp barcha klientlar formatlarini birlashtiradi).
-# Cookie "bot" tekshiruvini hal qiladi, lekin PO token muammosini emas.
-_CLIENTS_WITH_COOKIES = ["android_vr", "tv_embedded", "tv"]
-_CLIENTS_NO_COOKIES = ["android_vr", "tv_embedded", "tv", "mweb"]
+# Strategiya: `android` asosiy klient, `web` cookies bilan zaxira (cookies
+# bot-check'ni hal qiladi). Cookies invalide bo'lsa yt-dlp warning beradi
+# lekin android orqali davom etadi.
+_CLIENTS_WITH_COOKIES = ["android", "web"]
+_CLIENTS_NO_COOKIES = ["android"]
 
 _cookie_path: str | None = None
 _cookie_resolved = False
