@@ -3,6 +3,7 @@ aiohttp>=3.9
 certifi>=2024.7
 numpy>=1.26
 yt-dlp>=2025.6.9
+bgutil-ytdlp-pot-provider>=1.2
 mutagen>=1.47
 aiosqlite>=0.20
 pydantic-settings>=2.6

@@ -37,7 +37,7 @@ from bot.handlers import (
     youtube,
 )
 from bot.i18n import get_texts
-from bot.services import forcesub, tempsweep, tg_limits
+from bot.services import forcesub, pot_provider, tempsweep, tg_limits
 from bot.services.spotify import spotify
 from bot.web.oauth import build_app
 
@@ -202,6 +202,8 @@ async def main() -> None:
     removed = tempsweep.sweep(max_age=0)
     if removed:
         log.info("Startup temp tozalash: %d orphan o'chirildi", removed)
+    # YouTube PO token serveri (bot-detection bypass) — mavjud bo'lsa.
+    pot_provider.start()
 
     bot = Bot(
         settings.bot_token,
@@ -282,6 +284,7 @@ async def main() -> None:
         maintenance_task.cancel()
     finally:
         log.info("Shutting down…")
+        pot_provider.stop()
         await runner.cleanup()
         await spotify.close()
         await repo.flush()
