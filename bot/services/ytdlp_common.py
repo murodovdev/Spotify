@@ -1,9 +1,8 @@
-"""yt-dlp uchun umumiy sozlamalar: player_client va aria2c tezlashtirish.
+"""yt-dlp uchun umumiy sozlamalar: player_client, fallback va aria2c tezlashtirish.
 
 yt-dlp 2026.07+ YouTube signature/n-challenge uchun JS runtime (deno) talab
-qiladi. `android_vr` klienti PO token yoki cookies'siz barcha formatlarni
-(m4a, opus, video) beradi — boshqa klientlar SABR-only yoki cookies'ga
-bog'liq bo'lib qolgan.
+qiladi. `android_vr` asosiy klient — PO token yoki cookies'siz ishlaydi.
+`web` fallback sifatida: android_vr bot-detect qilsa yt-dlp avtomatik sinaydi.
 """
 
 import logging
@@ -11,7 +10,7 @@ import shutil
 
 log = logging.getLogger(__name__)
 
-_CLIENTS = ["android_vr"]
+_CLIENTS = ["android_vr", "web"]
 
 _HAS_ARIA2C: bool | None = None
 
@@ -41,6 +40,9 @@ def apply(opts: dict) -> dict:
                 "--split=16",
                 "--max-concurrent-downloads=1",
                 "--file-allocation=none",
+                "--allow-overwrite=true",
+                "--auto-file-renaming=false",
+                "--console-log-level=error",
             ]
         }
     return opts
