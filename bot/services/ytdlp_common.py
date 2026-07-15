@@ -1,11 +1,12 @@
-"""yt-dlp uchun umumiy sozlamalar: player_client, fallback va aria2c tezlashtirish.
+"""yt-dlp uchun umumiy sozlamalar: player_client, PO token va aria2c.
 
 yt-dlp 2026.07+ YouTube signature/n-challenge uchun JS runtime (deno) talab
-qiladi. `android_vr` asosiy klient — PO token yoki cookies'siz ishlaydi.
-`web` fallback sifatida: android_vr bot-detect qilsa yt-dlp avtomatik sinaydi.
+qiladi. `android_vr` asosiy klient. YouTube bot-detect qilsa PO token kerak:
+  YT_PO_TOKEN=WEB+AbCd...  env o'zgaruvchisi orqali beriladi.
 """
 
 import logging
+import os
 import shutil
 
 log = logging.getLogger(__name__)
@@ -13,6 +14,8 @@ log = logging.getLogger(__name__)
 _CLIENTS = ["android_vr", "web"]
 
 _HAS_ARIA2C: bool | None = None
+_PO_TOKEN: str | None = None
+_PO_LOADED = False
 
 
 def _aria2c_available() -> bool:
@@ -26,10 +29,25 @@ def _aria2c_available() -> bool:
     return _HAS_ARIA2C
 
 
+def _po_token() -> str | None:
+    global _PO_TOKEN, _PO_LOADED
+    if not _PO_LOADED:
+        _PO_TOKEN = os.getenv("YT_PO_TOKEN") or None
+        _PO_LOADED = True
+        if _PO_TOKEN:
+            log.info("YouTube PO token yuklandi")
+    return _PO_TOKEN
+
+
 def apply(opts: dict) -> dict:
-    """yt-dlp opts'ga player_client va aria2c sozlamalarini qo'shadi (idempotent)."""
+    """yt-dlp opts'ga player_client, PO token va aria2c sozlamalarini qo'shadi."""
     ea = opts.setdefault("extractor_args", {})
-    ea.setdefault("youtube", {}).setdefault("player_client", list(_CLIENTS))
+    yt = ea.setdefault("youtube", {})
+    yt.setdefault("player_client", list(_CLIENTS))
+
+    token = _po_token()
+    if token and "po_token" not in yt:
+        yt["po_token"] = [token]
 
     if _aria2c_available() and "external_downloader" not in opts:
         opts["external_downloader"] = {"default": "aria2c"}
