@@ -11,7 +11,9 @@ import shutil
 
 log = logging.getLogger(__name__)
 
-_CLIENTS = ["android_vr", "web"]
+# web birinchi: PO token (bgutil provider) faqat web-oilasi klientlariga
+# beriladi — android_vr token ishlatmaydi, u IP toza bo'lgandagina ishlaydi.
+_CLIENTS = ["web", "android_vr"]
 
 _HAS_ARIA2C: bool | None = None
 _PO_TOKEN: str | None = None
