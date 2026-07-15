@@ -1,8 +1,11 @@
-"""yt-dlp uchun umumiy sozlamalar: player_client, PO token va aria2c.
+"""yt-dlp uchun umumiy sozlamalar: player_client, PO token, proxy va aria2c.
 
 yt-dlp 2026.07+ YouTube signature/n-challenge uchun JS runtime (deno) talab
-qiladi. `android_vr` asosiy klient. YouTube bot-detect qilsa PO token kerak:
-  YT_PO_TOKEN=WEB+AbCd...  env o'zgaruvchisi orqali beriladi.
+qiladi. Bot-detection'ga qarshi qatlamlar:
+  1. bgutil PO token plagini (avtomatik, bot/services/pot_provider.py serveri);
+  2. YT_PO_TOKEN env — qo'lda berilgan token (plagindan ustuvor);
+  3. YTDLP_PROXY env — residential proxy URL (IP butunlay bloklangan holat uchun);
+  4. YTDLP_VERBOSE=1 env — yt-dlp'ning to'liq debug logi (POT oqimini ko'rsatadi).
 """
 
 import logging
@@ -18,6 +21,23 @@ _CLIENTS = ["web", "android_vr"]
 _HAS_ARIA2C: bool | None = None
 _PO_TOKEN: str | None = None
 _PO_LOADED = False
+_PLUGIN_CHECKED = False
+
+_VERBOSE = os.getenv("YTDLP_VERBOSE", "").strip() == "1"
+_PROXY = os.getenv("YTDLP_PROXY", "").strip()
+
+
+def _check_plugin() -> None:
+    """bgutil plagini yt-dlp'ga ko'rinishini bir marta tekshirib log qiladi."""
+    global _PLUGIN_CHECKED
+    if _PLUGIN_CHECKED:
+        return
+    _PLUGIN_CHECKED = True
+    try:
+        import yt_dlp_plugins.extractor.getpot_bgutil_http  # noqa: F401
+        log.info("bgutil yt-dlp plagini topildi (HTTP provider)")
+    except ImportError as e:
+        log.warning("bgutil yt-dlp plagini YO'Q — PO token ishlatilmaydi: %s", e)
 
 
 def _aria2c_available() -> bool:
@@ -42,7 +62,9 @@ def _po_token() -> str | None:
 
 
 def apply(opts: dict) -> dict:
-    """yt-dlp opts'ga player_client, PO token va aria2c sozlamalarini qo'shadi."""
+    """yt-dlp opts'ga umumiy sozlamalarni qo'shadi (idempotent)."""
+    _check_plugin()
+
     ea = opts.setdefault("extractor_args", {})
     yt = ea.setdefault("youtube", {})
     yt.setdefault("player_client", list(_CLIENTS))
@@ -50,6 +72,14 @@ def apply(opts: dict) -> dict:
     token = _po_token()
     if token and "po_token" not in yt:
         yt["po_token"] = [token]
+
+    if _PROXY and "proxy" not in opts:
+        opts["proxy"] = _PROXY
+
+    if _VERBOSE:
+        opts["verbose"] = True
+        opts["quiet"] = False
+        opts["no_warnings"] = False
 
     if _aria2c_available() and "external_downloader" not in opts:
         opts["external_downloader"] = {"default": "aria2c"}
