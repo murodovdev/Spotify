@@ -1,31 +1,51 @@
-"""yt-dlp uchun umumiy sozlamalar: player_client, PO token, proxy va aria2c.
+"""yt-dlp uchun umumiy sozlamalar: player_client, cookie, PO token, proxy, aria2c.
 
 yt-dlp 2026.07+ YouTube signature/n-challenge uchun JS runtime (deno) talab
-qiladi. Bot-detection'ga qarshi qatlamlar:
-  1. bgutil PO token plagini (avtomatik, bot/services/pot_provider.py serveri);
-  2. YT_PO_TOKEN env — qo'lda berilgan token (plagindan ustuvor);
-  3. YTDLP_PROXY env — residential proxy URL (IP butunlay bloklangan holat uchun);
-  4. YTDLP_VERBOSE=1 env — yt-dlp'ning to'liq debug logi (POT oqimini ko'rsatadi).
+qiladi. Datacenter IP'da ("Sign in to confirm you're not a bot") bot-detection'ga
+qarshi qatlamlar — ishonchlilik tartibida:
+
+  1. YT_COOKIES / YT_COOKIES_FILE — login qilingan (afzali burner) YouTube
+     akkaunt cookie'lari. ENG ishonchli yechim: yt-dlp autentifikatsiya
+     qilinganida bot-tekshiruv deyarli yo'qoladi va chidamli klientlar
+     (tv_downgraded, web_safari) ishlatiladi. Railway'da YT_COOKIES env'ga
+     cookies.txt matnini qo'ying — startupda /tmp faylga yoziladi.
+  2. bgutil PO token plagini (avtomatik, bot/services/pot_provider.py serveri)
+     — GVS/streaming URL uchun token yaratadi; cookie bilan birga ishlaydi.
+  3. YT_PO_TOKEN env — qo'lda berilgan token (plagindan ustuvor).
+  4. YTDLP_PROXY env — residential proxy URL (IP butunlay bloklangan holat uchun).
+  5. YTDLP_PLAYER_CLIENT env — player_client'ni qo'lda ustun qilish (vergul bilan).
+  6. YTDLP_VERBOSE=1 env — yt-dlp'ning to'liq debug logi (POT oqimini ko'rsatadi).
 """
 
 import importlib.util
 import logging
 import os
 import shutil
+import tempfile
 
 log = logging.getLogger(__name__)
 
-# web birinchi: PO token (bgutil provider) faqat web-oilasi klientlariga
-# beriladi — android_vr token ishlatmaydi, u IP toza bo'lgandagina ishlaydi.
-_CLIENTS = ["web", "android_vr"]
+# Klient tanlovi. Datacenter IP'da bloklanmaslik uchun:
+#   * cookie BOR   → tv + web_safari: autentifikatsiya bilan eng chidamli, POT
+#     GVS uchun ishlatiladi;
+#   * cookie YO'Q  → android_vr (JS'siz, POT talab qilmaydi) + web_safari
+#     (yt-dlp'ning o'z defaulti). "web" qattiq belgilash yomon edi — u har
+#     safar player bosqichida bot-tekshiruvga tushardi.
+_CLIENTS_WITH_COOKIES = ["tv", "web_safari"]
+_CLIENTS_NO_COOKIES = ["android_vr", "web_safari"]
 
 _HAS_ARIA2C: bool | None = None
 _PO_TOKEN: str | None = None
 _PO_LOADED = False
 _PLUGIN_CHECKED = False
+_COOKIE_FILE: str | None = None
+_COOKIE_LOADED = False
 
 _VERBOSE = os.getenv("YTDLP_VERBOSE", "").strip() == "1"
 _PROXY = os.getenv("YTDLP_PROXY", "").strip()
+_CLIENT_OVERRIDE = [
+    c.strip() for c in os.getenv("YTDLP_PLAYER_CLIENT", "").split(",") if c.strip()
+]
 
 
 def _check_plugin() -> None:
@@ -46,6 +66,40 @@ def _check_plugin() -> None:
         log.info("bgutil yt-dlp plagini topildi (HTTP provider)")
     else:
         log.warning("bgutil yt-dlp plagini YO'Q — PO token ishlatilmaydi")
+
+
+def _cookie_file() -> str | None:
+    """Cookie faylini bir marta tayyorlaydi (env matnidan yoki tayyor fayldan)."""
+    global _COOKIE_FILE, _COOKIE_LOADED
+    if _COOKIE_LOADED:
+        return _COOKIE_FILE
+    _COOKIE_LOADED = True
+
+    path = os.getenv("YT_COOKIES_FILE", "").strip()
+    if path:
+        if os.path.isfile(path):
+            _COOKIE_FILE = path
+            log.info("YouTube cookie fayli ishlatiladi: %s", path)
+        else:
+            log.warning("YT_COOKIES_FILE topilmadi: %s", path)
+        return _COOKIE_FILE
+
+    content = os.getenv("YT_COOKIES", "")
+    if content.strip():
+        # Netscape cookies.txt formati tab bilan ishlaydi; ba'zi env muharrirlar
+        # tablarni buzadi, shuning uchun matnni o'zgartirmasdan yozamiz.
+        fd, tmp = tempfile.mkstemp(prefix="yt_cookies_", suffix=".txt")
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(content if content.endswith("\n") else content + "\n")
+        _COOKIE_FILE = tmp
+        log.info("YouTube cookie'lari env'dan yozildi (%s)", tmp)
+    return _COOKIE_FILE
+
+
+def _clients() -> list[str]:
+    if _CLIENT_OVERRIDE:
+        return list(_CLIENT_OVERRIDE)
+    return list(_CLIENTS_WITH_COOKIES if _cookie_file() else _CLIENTS_NO_COOKIES)
 
 
 def _aria2c_available() -> bool:
@@ -75,7 +129,11 @@ def apply(opts: dict) -> dict:
 
     ea = opts.setdefault("extractor_args", {})
     yt = ea.setdefault("youtube", {})
-    yt.setdefault("player_client", list(_CLIENTS))
+    yt.setdefault("player_client", _clients())
+
+    cookies = _cookie_file()
+    if cookies and "cookiefile" not in opts:
+        opts["cookiefile"] = cookies
 
     token = _po_token()
     if token and "po_token" not in yt:
