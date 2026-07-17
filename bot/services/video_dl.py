@@ -37,8 +37,11 @@ _YT_SHORTS_RE = re.compile(
 
 # (platform_name, compiled_pattern)
 _PLATFORMS: list[tuple[str, re.Pattern]] = [
+    # Instagram bir xil postni bir necha ko'rinishda beradi: /p/, /reel/, /reels/
+    # (ilova ulashganda), /tv/, /share/… va profil bilan: /<user>/reel/<id>.
+    # Ixtiyoriy `[\w.]+/` prefiksi — profil segmenti uchun.
     ("Instagram", re.compile(
-        r"(?:https?://)?(?:www\.)?instagram\.com/(?:p|reel|tv)/[\w-]+",
+        r"(?:https?://)?(?:www\.)?instagram\.com/(?:[\w.]+/)?(?:p|reels?|tv|share)/[\w-]+",
         re.IGNORECASE,
     )),
     ("TikTok", re.compile(
@@ -81,6 +84,26 @@ class VideoInfo:
     thumbnail_url: str
     video_path: str
     platform: str = field(default="")
+
+
+# Havola ko'rinishidagi matn: sxema bilan, `www.` bilan yoki `domen.tld/…`.
+# Qo'shiq nomlari nuqta bilan yozilishi mumkin ("Mr. Brightside"), shuning uchun
+# TLD talab qilinadi va domenda bo'sh joy bo'lmasligi shart.
+_URL_LIKE_RE = re.compile(
+    r"(?:https?://|www\.)\S+"
+    r"|\b[\w-]+(?:\.[\w-]+)*\.(?:com|net|org|io|me|tv|fm|co|ru|uz|be|app|link|watch|it)"
+    r"(?:/\S*)?",
+    re.IGNORECASE,
+)
+
+
+def looks_like_url(text: str) -> bool:
+    """Matn qidiruv so'rovi emas, havola ekanligini bildiradimi?
+
+    Qo'llab-quvvatlanmagan havolani qo'shiq nomi deb qidirish natijasiz —
+    foydalanuvchi "hech narsa topilmadi" oladi va sababini tushunmaydi.
+    """
+    return bool(_URL_LIKE_RE.search(text or ""))
 
 
 def extract_video_url(text: str) -> tuple[str, str] | None:

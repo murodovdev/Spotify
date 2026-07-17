@@ -11,7 +11,7 @@ from bot import keyboards, store
 from bot.admin import repo as admin_repo
 from bot.admin import settings_store
 from bot.i18n import Texts
-from bot.services import search_engine
+from bot.services import search_engine, video_dl
 
 log = logging.getLogger(__name__)
 router = Router(name="search")
@@ -21,10 +21,17 @@ PER_PAGE = 6
 
 @router.message(F.text, ~F.text.startswith("/"))
 async def text_search(message: Message, t: Texts) -> None:
+    text = message.text.strip()
+    # Bu yerga yetgan havola — yuqoridagi routerlar (links/youtube/video) uni
+    # tanimagan. Uni qo'shiq nomi deb qidirish har doim natijasiz, shuning uchun
+    # sababni aytamiz.
+    if video_dl.looks_like_url(text):
+        await message.answer(t.LINK_UNSUPPORTED)
+        return
     if not settings_store.feature_enabled("search"):
         await message.answer("🔍 Search is temporarily disabled.")
         return
-    query = message.text.strip()[:100]
+    query = text[:100]
     status = await message.answer(t.SEARCHING)
     try:
         tracks = await search_engine.search(query)

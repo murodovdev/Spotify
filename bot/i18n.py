@@ -167,6 +167,7 @@ class Texts:
     VIDEO_ERROR: str
     BTN_FIND_MUSIC: str
     FINDING_MUSIC: str
+    LINK_UNSUPPORTED: str
 
     # --- Majburiy obuna ---
     FS_TITLE: str
@@ -315,6 +316,13 @@ UZ = Texts(
     VIDEO_ERROR="❌ Videoni yuklab bo'lmadi. Havolani tekshiring.",
     BTN_FIND_MUSIC="🎵 Musiqani topish",
     FINDING_MUSIC="🎵 <i>Musiqa aniqlanmoqda…</i>",
+    LINK_UNSUPPORTED=(
+        "🔗 Bu havolani qo'llab-quvvatlamayman.\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "Spotify, YouTube, Instagram, TikTok, Facebook, X, Pinterest yoki Vimeo "
+        "havolasini yuboring.\n"
+        "Yoki qo'shiq nomini yozing — men uni qidiraman."
+    ),
 
     BTN_CONNECT="🔗 Spotify ulash",
     BTN_DISCONNECT="🔌 Hisobni uzish",
@@ -626,6 +634,13 @@ EN = Texts(
     VIDEO_ERROR="❌ Could not download the video. Check the link.",
     BTN_FIND_MUSIC="🎵 Find Music",
     FINDING_MUSIC="🎵 <i>Identifying music…</i>",
+    LINK_UNSUPPORTED=(
+        "🔗 I don't support this link.\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "Send a Spotify, YouTube, Instagram, TikTok, Facebook, X, Pinterest or "
+        "Vimeo link.\n"
+        "Or just type a song name and I'll search for it."
+    ),
 
     BTN_CONNECT="🔗 Connect Spotify",
     BTN_DISCONNECT="🔌 Disconnect account",
@@ -938,6 +953,13 @@ RU = Texts(
     VIDEO_ERROR="❌ Не удалось загрузить видео. Проверьте ссылку.",
     BTN_FIND_MUSIC="🎵 Найти музыку",
     FINDING_MUSIC="🎵 <i>Определяю музыку…</i>",
+    LINK_UNSUPPORTED=(
+        "🔗 Эта ссылка не поддерживается.\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "Отправьте ссылку Spotify, YouTube, Instagram, TikTok, Facebook, X, "
+        "Pinterest или Vimeo.\n"
+        "Или напишите название песни — я найду её."
+    ),
 
     BTN_CONNECT="🔗 Подключить Spotify",
     BTN_DISCONNECT="🔌 Отключить аккаунт",
