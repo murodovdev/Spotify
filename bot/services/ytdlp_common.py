@@ -25,14 +25,17 @@ import tempfile
 
 log = logging.getLogger(__name__)
 
-# Klient tanlovi. Datacenter IP'da bloklanmaslik uchun:
-#   * cookie BOR   → tv + web_safari: autentifikatsiya bilan eng chidamli, POT
-#     GVS uchun ishlatiladi;
-#   * cookie YO'Q  → android_vr (JS'siz, POT talab qilmaydi) + web_safari
-#     (yt-dlp'ning o'z defaulti). "web" qattiq belgilash yomon edi — u har
-#     safar player bosqichida bot-tekshiruvga tushardi.
-_CLIENTS_WITH_COOKIES = ["tv", "web_safari"]
-_CLIENTS_NO_COOKIES = ["android_vr", "web_safari"]
+# Klient tanlovi (bir nechta video bilan empirik tekshirilgan, POT + yt-dlp-ejs
+# bilan). YouTube endi ko'p klientlarga SABR streamingни majburlaydi (yt-dlp
+# #12482) — bunday klientlar (web/web_safari/tv) yuklab bo'lmaydigan yoki 403
+# beradigan formatlar qaytaradi. Haqiqatan yuklab olinadigan m4a formatni:
+#   * mweb — cookie bilan (GVS POT + challenge solver kerak);
+#   * android_vr — cookiesiz (JS player talab qilmaydi, faqat GVS POT).
+# beradi. web_safari faqat ikkilamchi zaxira sifatida qoldirilgan (SABR
+# formatlari o'tkazib yuboriladi, lekin ba'zi videolar uchun manba bo'lishi
+# mumkin). Eski "tv/web" tanlovi 403 va "format mavjud emas" berardi.
+_CLIENTS_WITH_COOKIES = ["mweb", "web_safari"]
+_CLIENTS_NO_COOKIES = ["android_vr", "mweb"]
 
 _HAS_ARIA2C: bool | None = None
 _PO_TOKEN: str | None = None

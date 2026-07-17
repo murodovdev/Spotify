@@ -3,6 +3,11 @@ aiohttp>=3.9
 certifi>=2024.7
 numpy>=1.26
 yt-dlp>=2025.6.9
+# yt-dlp 2026.07+ YouTube signature/n-challenge'ni yechish uchun EJS solver
+# skriptlarini talab qiladi (deno runtime ustida ishlaydi). Ularsiz faqat
+# rasm/storyboard qaytadi → "Requested format is not available". Paket skriptni
+# image ichiga bundle qiladi — runtime'da GitHub'dan yuklab olish shart emas.
+yt-dlp-ejs>=0.8
 bgutil-ytdlp-pot-provider>=1.2
 mutagen>=1.47
 aiosqlite>=0.20
