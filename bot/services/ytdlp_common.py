@@ -4,11 +4,14 @@ yt-dlp 2026.07+ YouTube signature/n-challenge uchun JS runtime (deno) talab
 qiladi. Datacenter IP'da ("Sign in to confirm you're not a bot") bot-detection'ga
 qarshi qatlamlar — ishonchlilik tartibida:
 
-  1. YT_COOKIES / YT_COOKIES_FILE — login qilingan (afzali burner) YouTube
-     akkaunt cookie'lari. ENG ishonchli yechim: yt-dlp autentifikatsiya
-     qilinganida bot-tekshiruv deyarli yo'qoladi va chidamli klientlar
-     (tv_downgraded, web_safari) ishlatiladi. Railway'da YT_COOKIES env'ga
-     cookies.txt matnini qo'ying — startupda /tmp faylga yoziladi.
+  1. YT_COOKIES_B64 (TAVSIYA) / YT_COOKIES / YT_COOKIES_FILE — login qilingan
+     (afzali burner) YouTube akkaunt cookie'lari. ENG ishonchli yechim: yt-dlp
+     autentifikatsiya qilinganida bot-tekshiruv yo'qoladi.
+     TUZOQ: Netscape cookies.txt TAB bilan ajratiladi, Railway kabi env
+     maydonlari tab'ni bo'sh joyga aylantiradi → yt-dlp 0 ta cookie o'qiydi va
+     JIMGINA cookie'siz davom etadi ("not a bot" qaytadi). Shu sabab
+     YT_COOKIES_B64 (base64) afzal; xom YT_COOKIES berilsa tab'lar avtomatik
+     tiklanadi va o'qilgan cookie soni loglanadi.
   2. bgutil PO token plagini (avtomatik, bot/services/pot_provider.py serveri)
      — GVS/streaming URL uchun token yaratadi; cookie bilan birga ishlaydi.
   3. YT_PO_TOKEN env — qo'lda berilgan token (plagindan ustuvor).
@@ -17,13 +20,24 @@ qarshi qatlamlar — ishonchlilik tartibida:
   6. YTDLP_VERBOSE=1 env — yt-dlp'ning to'liq debug logi (POT oqimini ko'rsatadi).
 """
 
+import base64
 import importlib.util
 import logging
 import os
+import re
 import shutil
 import tempfile
 
 log = logging.getLogger(__name__)
+
+# http.cookiejar faylning BIRINCHI qatorida shu sarlavhani talab qiladi, aks
+# holda butun faylni rad etadi (LoadError).
+_NETSCAPE_MAGIC_RE = re.compile(r"#( Netscape)? HTTP Cookie File")
+_NETSCAPE_MAGIC = "# Netscape HTTP Cookie File"
+
+# Login qilinganini bildiruvchi cookie'lar — bittasi ham bo'lmasa bot-tekshiruvi
+# o'tmaydi.
+_AUTH_COOKIES = ("SID", "__Secure-1PSID", "__Secure-3PSID", "LOGIN_INFO")
 
 # Klient tanlovi (bir nechta video bilan empirik tekshirilgan, POT + yt-dlp-ejs
 # bilan). YouTube endi ko'p klientlarga SABR streamingни majburlaydi (yt-dlp
@@ -71,8 +85,73 @@ def _check_plugin() -> None:
         log.warning("bgutil yt-dlp plagini YO'Q — PO token ishlatilmaydi")
 
 
+def _normalize_cookies(content: str) -> tuple[str, int]:
+    """Env orqali kelgan cookies.txt'ni yt-dlp o'qiy oladigan holga keltiradi.
+
+    Ikki tuzoq: (1) Netscape formati TAB bilan ajratiladi, Railway kabi env
+    maydonlari tab'ni bo'sh joyga aylantiradi va yt-dlp BARCHA qatorlarni
+    jimgina o'tkazib yuboradi (0 ta cookie → "not a bot"); (2) sarlavha qatori
+    bo'lmasa http.cookiejar butun faylni rad etadi.
+    """
+    out: list[str] = []
+    repaired = 0
+    for line in content.splitlines():
+        stripped = line.strip()
+        is_cookie = stripped and (
+            not stripped.startswith("#") or stripped.startswith("#HttpOnly_")
+        )
+        if not is_cookie or "\t" in line:
+            out.append(line)
+            continue
+        # maxsplit=6 → oxirgi maydon (qiymat) ichidagi bo'sh joylar saqlanadi.
+        parts = line.split(None, 6)
+        if len(parts) == 7:
+            out.append("\t".join(parts))
+            repaired += 1
+        else:
+            out.append(line)
+
+    content = "\n".join(out) + "\n"
+    # Sarlavhasiz (faqat cookie qatorlari qo'yilgan) fayl butunlay rad etiladi.
+    first = next((ln for ln in out if ln.strip()), "")
+    if not _NETSCAPE_MAGIC_RE.match(first):
+        content = _NETSCAPE_MAGIC + "\n" + content
+        log.info("Cookie matnida Netscape sarlavhasi yo'q edi — qo'shildi")
+    return content, repaired
+
+
+def _check_cookies(path: str) -> None:
+    """Cookie fayl haqiqatan o'qilyaptimi — sonini va login cookie'sini loglaydi."""
+    try:
+        from yt_dlp.cookies import YoutubeDLCookieJar
+
+        jar = YoutubeDLCookieJar(path)
+        jar.load(ignore_discard=True, ignore_expires=True)
+        names = {c.name for c in jar}
+    except Exception as e:
+        log.error("Cookie faylni o'qib bo'lmadi (%s) — cookie'siz davom etamiz", e)
+        return
+    if not names:
+        log.error(
+            "Cookie fayl BUZUQ — 0 ta cookie o'qildi. Sabab odatda: env qiymatida "
+            "TAB'lar yo'qolgan. YT_COOKIES_B64 (base64) ishlating."
+        )
+        return
+    found = [n for n in _AUTH_COOKIES if n in names]
+    if found:
+        log.info(
+            "YouTube cookie'lari yuklandi: %d ta (login: %s)", len(names), ", ".join(found)
+        )
+    else:
+        log.warning(
+            "YouTube cookie'lari yuklandi (%d ta), lekin login cookie'si (%s) YO'Q — "
+            "bot-tekshiruvi o'tmaydi. Login qilingan holda qayta eksport qiling.",
+            len(names), "/".join(_AUTH_COOKIES),
+        )
+
+
 def _cookie_file() -> str | None:
-    """Cookie faylini bir marta tayyorlaydi (env matnidan yoki tayyor fayldan)."""
+    """Cookie faylini bir marta tayyorlaydi (fayl, base64 yoki xom env matnidan)."""
     global _COOKIE_FILE, _COOKIE_LOADED
     if _COOKIE_LOADED:
         return _COOKIE_FILE
@@ -82,20 +161,40 @@ def _cookie_file() -> str | None:
     if path:
         if os.path.isfile(path):
             _COOKIE_FILE = path
-            log.info("YouTube cookie fayli ishlatiladi: %s", path)
+            log.info("YouTube cookie fayli: %s", path)
+            _check_cookies(path)
         else:
             log.warning("YT_COOKIES_FILE topilmadi: %s", path)
         return _COOKIE_FILE
 
-    content = os.getenv("YT_COOKIES", "")
-    if content.strip():
-        # Netscape cookies.txt formati tab bilan ishlaydi; ba'zi env muharrirlar
-        # tablarni buzadi, shuning uchun matnni o'zgartirmasdan yozamiz.
-        fd, tmp = tempfile.mkstemp(prefix="yt_cookies_", suffix=".txt")
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
-            f.write(content if content.endswith("\n") else content + "\n")
-        _COOKIE_FILE = tmp
-        log.info("YouTube cookie'lari env'dan yozildi (%s)", tmp)
+    # Base64 — env orqali uzatishning ISHONCHLI yo'li: tab/qator buzilmaydi.
+    b64 = os.getenv("YT_COOKIES_B64", "").strip()
+    if b64:
+        try:
+            content = base64.b64decode(b64, validate=True).decode("utf-8")
+        except Exception as e:
+            log.error("YT_COOKIES_B64 dekod qilinmadi (%s) — cookie ishlatilmaydi", e)
+            return None
+    else:
+        content = os.getenv("YT_COOKIES", "")
+
+    if not content.strip():
+        return None
+
+    content, repaired = _normalize_cookies(content)
+    if repaired:
+        log.warning(
+            "Cookie'ning %d qatorida TAB yo'q edi (env qiymati buzilgan) — tiklandi. "
+            "Ishonchliroq: YT_COOKIES_B64 ishlating.",
+            repaired,
+        )
+
+    fd, tmp = tempfile.mkstemp(prefix="yt_cookies_", suffix=".txt")
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        f.write(content)
+    _COOKIE_FILE = tmp
+    log.info("YouTube cookie'lari env'dan yozildi (%s)", tmp)
+    _check_cookies(tmp)
     return _COOKIE_FILE
 
 
