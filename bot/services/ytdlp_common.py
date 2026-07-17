@@ -8,6 +8,7 @@ qiladi. Bot-detection'ga qarshi qatlamlar:
   4. YTDLP_VERBOSE=1 env — yt-dlp'ning to'liq debug logi (POT oqimini ko'rsatadi).
 """
 
+import importlib.util
 import logging
 import os
 import shutil
@@ -34,10 +35,17 @@ def _check_plugin() -> None:
         return
     _PLUGIN_CHECKED = True
     try:
-        import yt_dlp_plugins.extractor.getpot_bgutil_http  # noqa: F401
-        log.info("bgutil yt-dlp plagini topildi (HTTP provider)")
+        # import emas, find_spec: modul shu yerda exec bo'lsa provider registrga
+        # kiradi va yt-dlp o'z loaderi bilan qayta yuklaganda
+        # "PoTokenProvider BgUtilHTTP already registered" xatosi chiqadi.
+        spec = importlib.util.find_spec("yt_dlp_plugins.extractor.getpot_bgutil_http")
     except ImportError as e:
         log.warning("bgutil yt-dlp plagini YO'Q — PO token ishlatilmaydi: %s", e)
+        return
+    if spec is not None:
+        log.info("bgutil yt-dlp plagini topildi (HTTP provider)")
+    else:
+        log.warning("bgutil yt-dlp plagini YO'Q — PO token ishlatilmaydi")
 
 
 def _aria2c_available() -> bool:
