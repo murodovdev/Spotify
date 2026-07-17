@@ -18,9 +18,14 @@ is required.
 | `PORT` | | `8080` | Port for the OAuth web server / health check. |
 | `MAX_DOWNLOADS` | | `4` | Maximum concurrent downloads. |
 | `LASTFM_API_KEY` | | — | Optional. Strengthens the recommendation engine. |
-| `YOUTUBE_COOKIES` | | — | Raw `cookies.txt` contents. |
-| `YOUTUBE_COOKIES_B64` | | — | Base64-encoded `cookies.txt` (convenient for Railway). |
-| `YOUTUBE_COOKIES_FILE` | | — | Path to a cookies file, e.g. `/data/cookies.txt`. |
+| `YT_COOKIES` | | — | Raw `cookies.txt` contents. |
+| `YT_COOKIES_B64` | | — | Base64-encoded `cookies.txt` (convenient for Railway). |
+| `YT_COOKIES_FILE` | | — | Path to a cookies file, e.g. `/data/cookies.txt`. |
+| `TS_AUTHKEY` | | — | Tailscale auth key — routes YouTube out via a home exit node. |
+| `TS_EXIT_NODE` | | — | Exit node hostname or `100.x` IP. Required with `TS_AUTHKEY`. |
+| `TS_HOSTNAME` | | `trackflow-bot` | Device name in the tailnet. |
+| `TS_SOCKS_PORT` | | `1055` | Local SOCKS5 port `tailscaled` listens on. |
+| `YTDLP_PROXY` | | — | Residential proxy URL. Set it to skip Tailscale. |
 
 > Railway also injects `RAILWAY_ENVIRONMENT` and `RAILWAY_PUBLIC_DOMAIN`
 > automatically; TrackFlow reads them to auto-select the database path, bind
@@ -52,19 +57,54 @@ YouTube search. Limitations:
 > Web API playback-related scopes. Embed mode exists specifically so the bot
 > keeps working without Premium.
 
-## YouTube cookies
+## YouTube bot checks ("Sign in to confirm you're not a bot")
 
-YouTube frequently blocks data-center IPs ("Sign in to confirm you're not a
-bot") and refuses age-restricted videos. Providing login cookies resolves both.
+YouTube blocks data-center IPs (Railway) with this error. The block is on the
+**IP's reputation, not on the absence of cookies** — yt-dlp's own docs note that
+a cookieless "guest session" is good for ~300 videos/hour, but only from a clean
+IP. Changing `player_client` does not help: as of yt-dlp
+[#15865](https://github.com/yt-dlp/yt-dlp/issues/15865) even `android_vr` returns
+`LOGIN_REQUIRED` from a flagged IP. So there are two fixes, and they are
+alternatives — you need **one**.
+
+### Option A — move the egress IP (works without cookies)
+
+Free: run [Tailscale](https://tailscale.com) on a home machine that stays
+powered on, and route only YouTube traffic through it.
+
+1. At home: `tailscale up --advertise-exit-node`, then approve the exit node in
+   the Tailscale admin console.
+2. Set `TS_AUTHKEY` (a reusable auth key) and `TS_EXIT_NODE` (the exit node's
+   hostname or `100.x` address).
+
+At startup the bot brings up `tailscaled` in userspace mode (no TUN device
+needed), verifies that traffic really leaves via the exit node, and logs both
+IPs. If the check fails it leaves the proxy unset and carries on directly —
+a broken proxy would break every download. Only YouTube bytes are relayed
+(~4 MB/track); ffmpeg, the database and Telegram all stay on Railway.
+
+Paid alternative: set `YTDLP_PROXY` to a residential proxy (~$1/GB ≈ 250
+tracks/GB). Tailscale is skipped when `YTDLP_PROXY` is already set.
+
+### Option B — login cookies
+
+Also lifts age restrictions. Prefer a burner account: the account can get banned.
 
 1. Install a browser extension that exports cookies in **Netscape `cookies.txt`
    format** while logged in to YouTube.
 2. Provide the cookies through **one** of:
-   - `YOUTUBE_COOKIES` — paste the file contents directly.
-   - `YOUTUBE_COOKIES_B64` — base64-encode the file (best for Railway, avoids
-     multiline-variable issues).
-   - `YOUTUBE_COOKIES_FILE` — point to a file on a mounted volume, e.g.
-     `/data/cookies.txt`.
+   - `YT_COOKIES_B64` — base64-encode the file. **Strongly preferred:** the
+     Netscape format is tab-separated, and Railway's env fields turn tabs into
+     spaces, which makes yt-dlp skip every line and silently read 0 cookies.
+   - `YT_COOKIES` — paste the file contents directly (tabs are repaired on load).
+   - `YT_COOKIES_FILE` — point to a file on a mounted volume, e.g.
+     `/data/cookies.txt`. Note that yt-dlp **rewrites** this file with refreshed
+     session cookies.
+
+The bot logs how many cookies it read and whether a login cookie is present, so
+a broken or logged-out export is visible immediately. If the export is unusable
+it is discarded rather than passed to yt-dlp — supplying a cookie file makes
+yt-dlp skip the `android_vr` client entirely, which would be strictly worse.
 
 Cookie files are secrets — they are matched by `.gitignore` and must never be
 committed.

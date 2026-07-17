@@ -37,7 +37,7 @@ from bot.handlers import (
     youtube,
 )
 from bot.i18n import get_texts
-from bot.services import forcesub, pot_provider, tempsweep, tg_limits
+from bot.services import forcesub, pot_provider, tailscale_exit, tempsweep, tg_limits
 from bot.services.spotify import spotify
 from bot.web.oauth import build_app
 
@@ -202,6 +202,11 @@ async def main() -> None:
     removed = tempsweep.sweep(max_age=0)
     if removed:
         log.info("Startup temp tozalash: %d orphan o'chirildi", removed)
+    # Chiqish IP'ini uy internetiga ko'chiradi (cookie'siz bot-detection yechimi).
+    # pot_provider'dan OLDIN: YTDLP_PROXY'ni shu qo'yadi. bgutil tokenlarni o'z
+    # (Railway) IP'sidan yaratadi — PO token IP'ga emas, Visitor ID sessiyasiga
+    # bog'lanadi, shu sabab bu mos kelmaslik muammo emas.
+    tailscale_exit.start()
     # YouTube PO token serveri (bot-detection bypass) — mavjud bo'lsa.
     pot_provider.start()
 
@@ -285,6 +290,7 @@ async def main() -> None:
     finally:
         log.info("Shutting down…")
         pot_provider.stop()
+        tailscale_exit.stop()
         await runner.cleanup()
         await spotify.close()
         await repo.flush()

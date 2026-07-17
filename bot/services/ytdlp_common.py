@@ -4,6 +4,14 @@ yt-dlp 2026.07+ YouTube signature/n-challenge uchun JS runtime (deno) talab
 qiladi. Datacenter IP'da ("Sign in to confirm you're not a bot") bot-detection'ga
 qarshi qatlamlar — ishonchlilik tartibida:
 
+  0. YTDLP_PROXY — chiqish IP'ini data-markazdan RESIDENTIAL IP'ga ko'chiradi.
+     ILDIZ yechim va yagona CookieSIZ yechim: muammo cookie'da emas, IP obro'sida
+     (yt-dlp hujjati: cookie'siz "guest session" soatiga ~300 video beradi, lekin
+     faqat flagged bo'lmagan IP'dan). Klient almashtirish yordam bermaydi —
+     yt-dlp #15865/#16115 da `android_vr` ham flagged IP'da LOGIN_REQUIRED
+     qaytaradi va maintainerlar bu issue'larni "cookie ishlating" deb yopmoqda.
+     Tekin varianti: `bot/services/tailscale_exit.py` (uy kompyuteri exit node).
+     Pullik varianti: residential proxy (~$1/GB, ~250 trek/GB).
   1. YT_COOKIES_B64 (TAVSIYA) / YT_COOKIES / YT_COOKIES_FILE — login qilingan
      (afzali burner) YouTube akkaunt cookie'lari. ENG ishonchli yechim: yt-dlp
      autentifikatsiya qilinganida bot-tekshiruv yo'qoladi.
@@ -15,9 +23,8 @@ qarshi qatlamlar — ishonchlilik tartibida:
   2. bgutil PO token plagini (avtomatik, bot/services/pot_provider.py serveri)
      — GVS/streaming URL uchun token yaratadi; cookie bilan birga ishlaydi.
   3. YT_PO_TOKEN env — qo'lda berilgan token (plagindan ustuvor).
-  4. YTDLP_PROXY env — residential proxy URL (IP butunlay bloklangan holat uchun).
-  5. YTDLP_PLAYER_CLIENT env — player_client'ni qo'lda ustun qilish (vergul bilan).
-  6. YTDLP_VERBOSE=1 env — yt-dlp'ning to'liq debug logi (POT oqimini ko'rsatadi).
+  4. YTDLP_PLAYER_CLIENT env — player_client'ni qo'lda ustun qilish (vergul bilan).
+  5. YTDLP_VERBOSE=1 env — yt-dlp'ning to'liq debug logi (POT oqimini ko'rsatadi).
 """
 
 import base64
@@ -59,7 +66,6 @@ _COOKIE_FILE: str | None = None
 _COOKIE_LOADED = False
 
 _VERBOSE = os.getenv("YTDLP_VERBOSE", "").strip() == "1"
-_PROXY = os.getenv("YTDLP_PROXY", "").strip()
 _CLIENT_OVERRIDE = [
     c.strip() for c in os.getenv("YTDLP_PLAYER_CLIENT", "").split(",") if c.strip()
 ]
@@ -155,6 +161,26 @@ def _check_cookies(path: str) -> bool:
     return True
 
 
+def _cookie_env(name: str) -> str:
+    """`YT_<name>` ni o'qiydi, `YOUTUBE_<name>` ni ham qabul qiladi.
+
+    README va docs/CONFIGURATION.md uzoq vaqt `YOUTUBE_COOKIES*` deb yozilgan
+    edi, kod esa faqat `YT_COOKIES*` ni o'qirdi — hujjatga amal qilgan deploy'da
+    cookie JIMGINA e'tiborsiz qolib "not a bot" qaytardi. Hujjat tuzatildi,
+    lekin eski nom ham ishlaydi (deploy'ni buzmaslik uchun).
+    """
+    val = os.getenv(f"YT_{name}", "").strip()
+    if val:
+        return val
+    val = os.getenv(f"YOUTUBE_{name}", "").strip()
+    if val:
+        log.warning(
+            "YOUTUBE_%s eskirgan nom — YT_%s ga o'zgartiring (hozircha ishlaydi)",
+            name, name,
+        )
+    return val
+
+
 def _cookie_file() -> str | None:
     """Cookie faylini bir marta tayyorlaydi (fayl, base64 yoki xom env matnidan)."""
     global _COOKIE_FILE, _COOKIE_LOADED
@@ -162,7 +188,7 @@ def _cookie_file() -> str | None:
         return _COOKIE_FILE
     _COOKIE_LOADED = True
 
-    path = os.getenv("YT_COOKIES_FILE", "").strip()
+    path = _cookie_env("COOKIES_FILE")
     if path:
         if not os.path.isfile(path):
             log.warning("YT_COOKIES_FILE topilmadi: %s", path)
@@ -172,7 +198,7 @@ def _cookie_file() -> str | None:
         return _COOKIE_FILE
 
     # Base64 — env orqali uzatishning ISHONCHLI yo'li: tab/qator buzilmaydi.
-    b64 = os.getenv("YT_COOKIES_B64", "").strip()
+    b64 = _cookie_env("COOKIES_B64")
     if b64:
         try:
             content = base64.b64decode(b64, validate=True).decode("utf-8")
@@ -180,9 +206,15 @@ def _cookie_file() -> str | None:
             log.error("YT_COOKIES_B64 dekod qilinmadi (%s) — cookie ishlatilmaydi", e)
             return None
     else:
-        content = os.getenv("YT_COOKIES", "")
+        content = _cookie_env("COOKIES")
 
     if not content.strip():
+        # ATAYIN log: ilgari bu yo'l butunlay JIM edi — cookie sozlanmagani
+        # ("not a bot" ning eng ko'p sababi) logda umuman ko'rinmasdi.
+        log.info(
+            "YouTube cookie sozlanmagan (YT_COOKIES_B64/YT_COOKIES/YT_COOKIES_FILE "
+            "yo'q) — cookie'siz davom etamiz"
+        )
         return None
 
     content, repaired = _normalize_cookies(content)
@@ -208,6 +240,13 @@ def _clients() -> list[str]:
     if _CLIENT_OVERRIDE:
         return list(_CLIENT_OVERRIDE)
     return list(_CLIENTS_WITH_COOKIES if _cookie_file() else _CLIENTS_NO_COOKIES)
+
+
+def _proxy() -> str:
+    """Proxy URL'i. ATAYIN har chaqiruvda o'qiladi: `tailscale_exit.start()`
+    YTDLP_PROXY'ni startupda qo'yadi, bu modul esa undan OLDIN import bo'ladi —
+    import vaqtida o'qilsa Tailscale proxysi hech qachon ishlatilmasdi."""
+    return os.getenv("YTDLP_PROXY", "").strip()
 
 
 def _aria2c_available() -> bool:
@@ -247,8 +286,9 @@ def apply(opts: dict) -> dict:
     if token and "po_token" not in yt:
         yt["po_token"] = [token]
 
-    if _PROXY and "proxy" not in opts:
-        opts["proxy"] = _PROXY
+    proxy = _proxy()
+    if proxy and "proxy" not in opts:
+        opts["proxy"] = proxy
 
     if _VERBOSE:
         opts["verbose"] = True

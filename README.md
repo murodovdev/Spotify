@@ -122,7 +122,9 @@ Liked Songs; without them the bot automatically falls back to **embed mode**
 | `PORT` | | OAuth web server port (default `8080`). |
 | `MAX_DOWNLOADS` | | Max concurrent downloads (default `4`). |
 | `LASTFM_API_KEY` | | Optional — strengthens the recommendation engine. |
-| `YOUTUBE_COOKIES` / `_B64` / `_FILE` | | Optional YouTube cookies to bypass bot checks. See [Configuration](docs/CONFIGURATION.md). |
+| `TS_AUTHKEY` / `TS_EXIT_NODE` | | Route YouTube out via a home Tailscale exit node — the cookieless fix for bot checks. See [Configuration](docs/CONFIGURATION.md). |
+| `YTDLP_PROXY` | | Residential proxy URL. Alternative to the above; skips Tailscale. |
+| `YT_COOKIES` / `_B64` / `_FILE` | | Optional YouTube login cookies. Also lifts age restrictions. |
 
 See **[docs/CONFIGURATION.md](docs/CONFIGURATION.md)** for the full reference,
 including how to obtain Spotify credentials and export YouTube cookies.

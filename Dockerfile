@@ -4,9 +4,19 @@ FROM python:3.12-slim
 # Deno is required by yt-dlp ≥2026.07 for YouTube signature/n-challenge solving.
 # bgutil-ytdlp-pot-provider server generates PO tokens so YouTube does not
 # bot-detect the datacenter IP (paired with the pip plugin of the same name).
+# Tailscale routes YouTube traffic out through a home exit node, which is the
+# only cookieless fix for "Sign in to confirm you're not a bot" — the block is
+# on the datacenter IP's reputation, not on the absence of cookies. Static
+# tarball (not the apt repo) so the base image's Debian release does not matter.
+# Inert unless TS_AUTHKEY + TS_EXIT_NODE are set: see bot/services/tailscale_exit.py.
 ARG BGUTIL_VERSION=1.3.1
+ARG TAILSCALE_VERSION=1.98.9
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ffmpeg aria2 curl unzip \
+    && curl -fsSL https://pkgs.tailscale.com/stable/tailscale_${TAILSCALE_VERSION}_amd64.tgz -o /tmp/ts.tgz \
+    && tar xzf /tmp/ts.tgz -C /tmp \
+    && mv /tmp/tailscale_${TAILSCALE_VERSION}_amd64/tailscale /tmp/tailscale_${TAILSCALE_VERSION}_amd64/tailscaled /usr/local/bin/ \
+    && rm -rf /tmp/ts.tgz /tmp/tailscale_${TAILSCALE_VERSION}_amd64 \
     && curl -fsSL https://github.com/denoland/deno/releases/latest/download/deno-x86_64-unknown-linux-gnu.zip -o /tmp/deno.zip \
     && unzip /tmp/deno.zip -d /usr/local/bin/ \
     && rm /tmp/deno.zip \
