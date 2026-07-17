@@ -50,6 +50,14 @@ def _yt_entries(query: str, limit: int) -> list[dict]:
     return list(info.get("entries") or [])
 
 
+def _sc_entries(query: str, limit: int) -> list[dict]:
+    # SoundCloud'da YouTube bot-detection muammosi yo'q, shu sabab ytdlp_common
+    # (player_client/PO token/cookie) qo'llanmaydi — sof qidiruv opts yetarli.
+    with YoutubeDL(dict(_SEARCH_OPTS)) as ydl:
+        info = ydl.extract_info(f"scsearch{limit}:{query}", download=False)
+    return list(info.get("entries") or [])
+
+
 def _score(entry: dict, track: Track) -> float:
     duration = entry.get("duration") or 0
     dur_diff = abs(duration - track.duration) if duration and track.duration else 12.0
@@ -98,6 +106,41 @@ def _pick_sync(track: Track) -> str | None:
 
 async def find_video_id(track: Track) -> str | None:
     return await asyncio.to_thread(_pick_sync, track)
+
+
+# Fallbackда ketma-ket sinaladigan SoundCloud nomzodlar soni. Eng yaxshi natija
+# DRM himoyalangan yoki o'chirilgan bo'lsa, keyingisi (masalan DRM'siz qayta-yuk)
+# ishlashi mumkin.
+_SC_CANDIDATES = 3
+
+
+def _pick_sc_sync(track: Track) -> list[str]:
+    query = f"{track.artists} {track.title}"
+    try:
+        entries = _sc_entries(query, 8)
+    except Exception:
+        log.exception("SoundCloud qidiruv xatosi: %s", query)
+        return []
+
+    # SoundCloud entry'da audio manzili sifatida permalink (webpage_url) ishlatiladi.
+    candidates = sorted(
+        (
+            (_score(e, track), e.get("webpage_url") or e.get("url"))
+            for e in entries
+            if e.get("webpage_url") or e.get("url")
+        ),
+        key=lambda c: c[0],
+    )
+    urls = [url for score, url in candidates if score <= MAX_SCORE]
+    if not urls:
+        log.info("SoundCloud mos audio topilmadi: %s", query)
+    return urls[:_SC_CANDIDATES]
+
+
+async def find_soundcloud_urls(track: Track) -> list[str]:
+    """YouTube yiqilганда fallback: SoundCloud'dan mos trek permalinklari (ballash
+    tartibida). Ketma-ket sinash uchun bir nechta nomzod qaytaradi."""
+    return await asyncio.to_thread(_pick_sc_sync, track)
 
 
 def _strip_channel_prefix(title: str, channel: str) -> str:

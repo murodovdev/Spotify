@@ -57,7 +57,8 @@ def _ffmpeg_location() -> str | None:
     return None
 
 
-def _ydl_download(video_id: str, tmpdir: str, bitrate: str) -> str:
+def _ydl_download(url: str, tmpdir: str, bitrate: str) -> str:
+    """Berilgan URL'dan (YouTube yoki SoundCloud) audio yuklab MP3 qaytaradi."""
     opts = {
         "format": "bestaudio[ext=m4a]/bestaudio/best",
         "outtmpl": os.path.join(tmpdir, "%(id)s.%(ext)s"),
@@ -80,11 +81,44 @@ def _ydl_download(video_id: str, tmpdir: str, bitrate: str) -> str:
     if ffmpeg_loc:
         opts["ffmpeg_location"] = ffmpeg_loc
     with YoutubeDL(opts) as ydl:
-        ydl.extract_info(f"https://www.youtube.com/watch?v={video_id}", download=True)
+        ydl.extract_info(url, download=True)
     files = glob.glob(os.path.join(tmpdir, "*.mp3"))
     if not files:
         raise TrackNotFound("MP3 hosil bo'lmadi")
-    return files[0]
+    # Fallback bir xil tmpdir'ni ishlatadi — eng yangi faylni tanlaymiz.
+    return max(files, key=os.path.getmtime)
+
+
+async def _fetch_audio(track: Track, bitrate: str, tmpdir: str) -> str:
+    """Avval YouTube, u yiqilsa SoundCloud'dan audio yuklaydi.
+
+    YouTube datacenter IP'da "not a bot" bilan bloklanishi mumkin; SoundCloud'da
+    bunday cheklov yo'q, shu sabab ishonchli zaxira manba.
+    """
+    loop = asyncio.get_running_loop()
+
+    video_id = track.video_id or await matcher.find_video_id(track)
+    if video_id:
+        url = f"https://www.youtube.com/watch?v={video_id}"
+        try:
+            return await loop.run_in_executor(_executor, _ydl_download, url, tmpdir, bitrate)
+        except Exception as e:
+            log.warning(
+                "YouTube yuklab bo'lmadi (%s) — SoundCloud'ga o'tamiz: %s",
+                e, track.full_name,
+            )
+
+    # SoundCloud nomzodlarini ketma-ket sinaymiz: eng yaxshisi DRM/o'chirilgan
+    # bo'lsa keyingisi ishlashi mumkin.
+    for sc_url in await matcher.find_soundcloud_urls(track):
+        try:
+            path = await loop.run_in_executor(_executor, _ydl_download, sc_url, tmpdir, bitrate)
+            log.info("SoundCloud'dan yuklandi: %s", track.full_name)
+            return path
+        except Exception as e:
+            log.warning("SoundCloud yuklab bo'lmadi (%s): %s", e, track.full_name)
+
+    raise TrackNotFound(track.full_name)
 
 
 def _reencode(path: str, bitrate: str) -> str:
@@ -140,10 +174,6 @@ async def _fetch_cover(url: str) -> bytes | None:
 
 
 async def download(track: Track, bitrate: str, tmpdir: str) -> Downloaded:
-    video_id = track.video_id or await matcher.find_video_id(track)
-    if not video_id:
-        raise TrackNotFound(track.full_name)
-
     if bitrate == "320" and track.duration > LONG_TRACK_SECONDS:
         bitrate = "128"
 
@@ -152,19 +182,16 @@ async def download(track: Track, bitrate: str, tmpdir: str) -> Downloaded:
         cover_url = thumb_url = await spotify.oembed_thumb(track.id)
 
     async with _download_sem:
-        loop = asyncio.get_running_loop()
-        path_task = loop.run_in_executor(
-            _executor, _ydl_download, video_id, tmpdir, bitrate
-        )
         cover_task = asyncio.create_task(_fetch_cover(cover_url))
         thumb_task = asyncio.create_task(_fetch_cover(thumb_url))
         try:
-            path = await path_task
-        except TrackNotFound:
+            # Manba tanlash va yuklab olish (YouTube → SoundCloud fallback) shu
+            # yerda; muvaffaqiyatsizlikda TrackNotFound qaytadi.
+            path = await _fetch_audio(track, bitrate, tmpdir)
+        except BaseException:
+            cover_task.cancel()
+            thumb_task.cancel()
             raise
-        except Exception as e:
-            log.warning("yt-dlp xatosi %s: %s", track.full_name, e)
-            raise TrackNotFound(track.full_name) from e
         cover = await cover_task
         thumb = await thumb_task
 
