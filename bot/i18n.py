@@ -1248,24 +1248,21 @@ def playlist_header(playlist, page: int, pages: int, t: Texts) -> str:
 def track_caption(track) -> str:
     """Trek uchun ma'lumot kartasi (audio ostidagi izoh).
 
-    Faqat mavjud maydonlar ko'rsatiladi — bo'sh janr/yil/albom yozilmaydi.
+    Faqat nom, ijrochi va janr|yil. Albom va davomiylik ataylab yo'q — ularni
+    Telegram pleyerining o'zi ko'rsatadi, takrorlash kartani shishiradi.
+    Faqat mavjud maydonlar chiqadi — bo'sh janr/yil yozilmaydi.
     """
     esc = html.escape
     lines = [f"🎵 <b>{esc(track.title)}</b>"]
     if track.artists:
         lines.append(f"👤 {esc(track.artists)}")
 
-    meta: list[str] = []
-    if track.album:
-        meta.append(f"💿 {esc(track.album)}")
-    if getattr(track, "genre", ""):
-        meta.append(f"🎼 {esc(track.genre)}")
-    if track.year:
-        meta.append(f"📅 {track.year}")
-    if track.duration:
-        mins, secs = divmod(track.duration, 60)
-        meta.append(f"⏱ {mins}:{secs:02d}")
-    if meta:
-        lines.append(" · ".join(meta))
+    genre = getattr(track, "genre", "")
+    if genre and track.year:
+        lines.append(f"🎼 {esc(genre)} | {track.year}")
+    elif genre:
+        lines.append(f"🎼 {esc(genre)}")
+    elif track.year:
+        lines.append(f"📅 {track.year}")
 
     return "\n".join(lines)
