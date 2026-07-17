@@ -120,8 +120,14 @@ def _normalize_cookies(content: str) -> tuple[str, int]:
     return content, repaired
 
 
-def _check_cookies(path: str) -> None:
-    """Cookie fayl haqiqatan o'qilyaptimi — sonini va login cookie'sini loglaydi."""
+def _check_cookies(path: str) -> bool:
+    """Cookie fayl ishlatishga yaroqlimi — o'qiladimi va login cookie'si bormi.
+
+    Yaroqsiz cookie'ni BERMASLIK muhim: fayl berilsa yt-dlp `android_vr`ni
+    "cookie qo'llab-quvvatlamaydi" deb o'tkazib yuboradi va autentifikatsiyasiz
+    ishlamaydigan klientlar qoladi. Yaroqsiz bo'lsa cookie'siz yo'lга (android_vr)
+    tushgan afzal.
+    """
     try:
         from yt_dlp.cookies import YoutubeDLCookieJar
 
@@ -130,24 +136,23 @@ def _check_cookies(path: str) -> None:
         names = {c.name for c in jar}
     except Exception as e:
         log.error("Cookie faylni o'qib bo'lmadi (%s) — cookie'siz davom etamiz", e)
-        return
+        return False
     if not names:
         log.error(
-            "Cookie fayl BUZUQ — 0 ta cookie o'qildi. Sabab odatda: env qiymatida "
-            "TAB'lar yo'qolgan. YT_COOKIES_B64 (base64) ishlating."
+            "Cookie fayl BUZUQ — 0 ta cookie o'qildi (sabab odatda: env qiymatida "
+            "TAB'lar yo'qolgan; YT_COOKIES_B64 ishlating) — cookie'siz davom etamiz."
         )
-        return
+        return False
     found = [n for n in _AUTH_COOKIES if n in names]
-    if found:
-        log.info(
-            "YouTube cookie'lari yuklandi: %d ta (login: %s)", len(names), ", ".join(found)
-        )
-    else:
-        log.warning(
-            "YouTube cookie'lari yuklandi (%d ta), lekin login cookie'si (%s) YO'Q — "
-            "bot-tekshiruvi o'tmaydi. Login qilingan holda qayta eksport qiling.",
+    if not found:
+        log.error(
+            "Cookie'lar o'qildi (%d ta), lekin login cookie'si (%s) YO'Q — login "
+            "qilingan holda qayta eksport qiling. Cookie'siz davom etamiz.",
             len(names), "/".join(_AUTH_COOKIES),
         )
+        return False
+    log.info("YouTube cookie'lari yuklandi: %d ta (login: %s)", len(names), ", ".join(found))
+    return True
 
 
 def _cookie_file() -> str | None:
@@ -159,12 +164,11 @@ def _cookie_file() -> str | None:
 
     path = os.getenv("YT_COOKIES_FILE", "").strip()
     if path:
-        if os.path.isfile(path):
-            _COOKIE_FILE = path
-            log.info("YouTube cookie fayli: %s", path)
-            _check_cookies(path)
-        else:
+        if not os.path.isfile(path):
             log.warning("YT_COOKIES_FILE topilmadi: %s", path)
+        elif _check_cookies(path):
+            log.info("YouTube cookie fayli: %s", path)
+            _COOKIE_FILE = path
         return _COOKIE_FILE
 
     # Base64 — env orqali uzatishning ISHONCHLI yo'li: tab/qator buzilmaydi.
@@ -192,9 +196,11 @@ def _cookie_file() -> str | None:
     fd, tmp = tempfile.mkstemp(prefix="yt_cookies_", suffix=".txt")
     with os.fdopen(fd, "w", encoding="utf-8") as f:
         f.write(content)
-    _COOKIE_FILE = tmp
-    log.info("YouTube cookie'lari env'dan yozildi (%s)", tmp)
-    _check_cookies(tmp)
+    if _check_cookies(tmp):
+        log.info("YouTube cookie'lari env'dan yozildi (%s)", tmp)
+        _COOKIE_FILE = tmp
+    else:
+        os.remove(tmp)
     return _COOKIE_FILE
 
 

@@ -310,16 +310,26 @@ _FMT_CODEC = {
 def _available_formats(info: dict) -> tuple[str, ...]:
     """Video uchun haqiqatan ham mavjud formatlar.
 
-    mp3/flac har doim mumkin (istalgan audio oqimidan ffmpeg konvertatsiya
-    qiladi). m4a va opus esa manbada mos oqim bo'lsagina ko'rsatiladi —
-    aks holda ular qayta kodlashni talab qiladi va "original"/"lossless"
-    va'dasi yolg'on bo'lib qoladi.
+    mp3/flac har doim mumkin (istalgan audio oqimidan, hatto video+audio
+    birlashgan oqimdan ham, ffmpeg konvertatsiya qiladi). m4a va opus esa
+    manbada mos AUDIO-ONLY oqim bo'lsagina ko'rsatiladi — aks holda ular qayta
+    kodlashni talab qiladi va "original"/"lossless" va'dasi yolg'on bo'lib
+    qoladi.
+
+    MUHIM: faqat audio-only (vcodec=none) oqimlar hisobga olinadi, chunki
+    yuklash selektori `bestaudio` — u ham aynan shularni talab qiladi. Aks holda
+    video+audio birlashgan mp4 (acodec=mp4a + vcodec=avc1) "m4a bor" deb
+    hisoblanib, tugma ko'rsatiladi va yuklashda "Requested format is not
+    available" beradi. Bu YouTube SABR majburlaganda real bo'lgan (audio-only
+    oqimlar yo'qolib, faqat birlashganlari qoladi).
     """
     has_m4a = has_opus = False
     for f in info.get("formats") or []:
         acodec = (f.get("acodec") or "").lower()
         if not acodec or acodec == "none":
             continue
+        if (f.get("vcodec") or "none").lower() != "none":
+            continue  # video+audio birlashgan — `bestaudio` uni tanlamaydi
         if f.get("ext") == "m4a" or acodec.startswith("mp4a"):
             has_m4a = True
         if acodec.startswith("opus"):
